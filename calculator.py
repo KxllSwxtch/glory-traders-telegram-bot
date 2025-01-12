@@ -658,6 +658,14 @@ def calculate_cost(country, message):
         elif current_country == "Kazakhstan":
             print_message("Выполняется расчёт стоимости для Казахстана")
 
+            year, month = 0, 0
+            if len(car_date) > 6:
+                year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
+                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
+            else:
+                year = int(f"20{car_date[-2:]}")
+                month = int(car_date[2:4])
+
             # Конвертируем цену авто в тенге
             car_price_krw = int(car_price) * 10000
             car_price_kzt = car_price_krw * krw_rate_kz
@@ -747,14 +755,6 @@ def calculate_cost(country, message):
             car_data["utilization_fee_kzt"] = utilization_fee_kzt
             car_data["total_price_kzt"] = total_cost_kzt
             car_data["first_registration_fee_kzt"] = registration_fee_kzt
-
-            year, month = 0, 0
-            if len(car_date) > 6:
-                year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
-                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
-            else:
-                year = int(f"20{car_date[-2:]}")
-                month = int(car_date[2:4])
 
             age_formatted = calculate_age(year, month)
             engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
