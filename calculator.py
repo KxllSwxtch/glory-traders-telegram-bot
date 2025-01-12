@@ -713,9 +713,9 @@ def calculate_cost(country, message):
             # Расчет первичной регистрации
             mpr = 3932  # Минимальный расчетный показатель в тенге на 2025 год
 
-            if car_year >= datetime.datetime.now().year - 2:
+            if year >= datetime.datetime.now().year - 2:
                 registration_fee_kzt = 0.25 * mpr  # До 2 лет
-            elif car_year >= datetime.datetime.now().year - 3:
+            elif year >= datetime.datetime.now().year - 3:
                 registration_fee_kzt = 50 * mpr  # От 2 до 3 лет
             else:
                 registration_fee_kzt = 500 * mpr  # Старше 3 лет
