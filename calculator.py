@@ -671,6 +671,25 @@ def calculate_cost(country, message):
             # Таможенная декларация
             customs_declaration_fee_kzt = 25152
 
+            # Утильсбор
+            engine_volume = int(car_engine_displacement)
+            base_utilization_fee_kzt = 200000  # Базовая ставка
+
+            # Определяем коэффициент
+            if engine_volume <= 1000:
+                coefficient = 0.5
+            elif engine_volume <= 2000:
+                coefficient = 1.0
+            elif engine_volume <= 3000:
+                coefficient = 2.0
+            elif engine_volume <= 4000:
+                coefficient = 3.0
+            else:
+                coefficient = 4.0
+
+            # Рассчитываем утильсбор
+            utilization_fee_kzt = base_utilization_fee_kzt * coefficient
+
             # Акцизный сбор
             excise_fee_kzt = (
                 (int(car_engine_displacement) - 3000) * 100
@@ -691,6 +710,16 @@ def calculate_cost(country, message):
             # Сертификация (СБКТС)
             sbkts_fee_kzt = 60000
 
+            # Расчет первичной регистрации
+            mpr = 3932  # Минимальный расчетный показатель в тенге на 2025 год
+
+            if car_year >= datetime.datetime.now().year - 2:
+                registration_fee_kzt = 0.25 * mpr  # До 2 лет
+            elif car_year >= datetime.datetime.now().year - 3:
+                registration_fee_kzt = 50 * mpr  # От 2 до 3 лет
+            else:
+                registration_fee_kzt = 500 * mpr  # Старше 3 лет
+
             # Итоговая стоимость
             total_cost_kzt = (
                 car_price_kzt
@@ -703,6 +732,8 @@ def calculate_cost(country, message):
                 + delivery_fee_kzt
                 + fraht_fee_kzt
                 + sbkts_fee_kzt
+                + utilization_fee_kzt
+                + registration_fee_kzt
             )
 
             car_data["price_kzt"] = car_price_kzt
@@ -713,7 +744,9 @@ def calculate_cost(country, message):
             car_data["broker_fee_kzt"] = broker_fee_kzt
             car_data["fraht_fee_kzt"] = fraht_fee_kzt
             car_data["sbkts_fee_kzt"] = sbkts_fee_kzt
+            car_data["utilization_fee_kzt"] = utilization_fee_kzt
             car_data["total_price_kzt"] = total_cost_kzt
+            car_data["first_registration_fee_kzt"] = registration_fee_kzt
 
             year, month = 0, 0
             if len(car_date) > 6:
@@ -964,6 +997,8 @@ def handle_callback_query(call):
                 f"Стоимость авто: <b>{format_number(car_data['price_kzt'])} ₸</b>\n\n"
                 f"НДС (12%): <b>{format_number(car_data['vat_kzt'])} ₸</b>\n\n"
                 f"Таможенная пошлина: <b>{format_number(car_data['customs_fee_kzt'])} ₸</b>\n\n"
+                f"Утильсбор: <b>{format_number(car_data['utilization_fee_kzt'])} ₸</b>\n\n"
+                f"Первичная регистрация: <b>{format_number(car_data['first_registration_fee_kzt'])} ₸</b>\n\n"
                 f"Акциз: <b>{format_number(car_data['excise_fee_kzt'])} ₸</b>\n\n"
                 f"Итоговая стоимость под ключ до Алматы: <b>{format_number(car_data['total_price_kzt'])} ₸</b>\n\n"
             )
