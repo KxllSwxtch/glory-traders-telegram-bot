@@ -566,16 +566,16 @@ def calculate_cost(country, message):
             car_price_rub = price_krw * (krw_rub_rate + 0.0198)
 
             # Рассчитываем мощность двигателя в л.с.
-            horsepower = calculate_horse_power(engine_volume)
+            horsepower = calculate_horse_power(car_engine_displacement)
 
             # Рассчитываем таможенный сбор
             customs_fee = calculate_customs_fee(car_price_rub)
 
             # Рассчитываем утилизационный сбор
-            recycling_fee = calculate_recycling_fee(engine_volume)
+            recycling_fee = calculate_recycling_fee(car_engine_displacement)
 
             # Рассчитываем таможенную пошлину
-            customs_duty = calculate_customs_duty(engine_volume, eur_rub_rate)
+            customs_duty = calculate_customs_duty(car_engine_displacement, eur_rub_rate)
 
             excise_fee = calculate_excise_russia(horsepower)
 
@@ -599,13 +599,15 @@ def calculate_cost(country, message):
             car_data["customs_duty_fee"] = customs_duty
             car_data["excise"] = excise_fee
 
-            year = 0
+            year, month = 0, 0
             if len(car_date) > 6:
                 year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
+                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
             else:
                 year = int(f"20{car_date[-2:]}")
+                month = int(car_date[2:4])
 
-            age_formatted = calculate_age(year)
+            age_formatted = calculate_age(year, month)
             engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
@@ -711,7 +713,15 @@ def calculate_cost(country, message):
             car_data["sbkts_fee_kzt"] = sbkts_fee_kzt
             car_data["total_price_kzt"] = total_cost_kzt
 
-            age_formatted = calculate_age(car_date)
+            year, month = 0, 0
+            if len(car_date) > 6:
+                year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
+                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
+            else:
+                year = int(f"20{car_date[-2:]}")
+                month = int(car_date[2:4])
+
+            age_formatted = calculate_age(year, month)
             engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
@@ -772,9 +782,11 @@ def calculate_cost(country, message):
             else:
                 car_year = int(f"20{car_date[-2:]}")
 
-            print(car_year)
+            customs_fee_kgs_usd = calculate_customs_fee_kg(
+                car_engine_displacement, car_year
+            )
 
-            customs_fee = calculate_customs_fee_kg(car_engine_displacement, car_year)
+            customs_fee_kgs = customs_fee_kgs_usd * usd_rate_krg
 
             # НДС (12%)
             # vat = price_kgs * 0.12
@@ -797,20 +809,23 @@ def calculate_cost(country, message):
 
             # Полная стоимость
             total_cost_kgs = (
-                price_kgs
-                + customs_fee
-                + broker_fee
-                + delivery_fee
-                + (440000 * krw_rate_krg)
+                price_kgs + customs_fee_kgs + delivery_fee + (440000 * krw_rate_krg)
             )
 
             car_data["price_kgs"] = price_kgs
-            car_data["customs_fee_kgs"] = customs_fee
+            car_data["customs_fee_kgs"] = customs_fee_kgs
             car_data["delivery_fee_kgs"] = delivery_fee
-            car_data["broker_fee_kgs"] = broker_fee
             car_data["total_price_kgs"] = total_cost_kgs
 
-            age_formatted = calculate_age(car_year)
+            year, month = 0, 0
+            if len(car_date) > 6:
+                year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
+                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
+            else:
+                year = int(f"20{car_date[-2:]}")
+                month = int(car_date[2:4])
+
+            age_formatted = calculate_age(year, month)
             engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
@@ -954,21 +969,13 @@ def handle_callback_query(call):
         if current_country == "Kyrgyzstan":
             print_message("[КЫРГЫЗСТАН] ДЕТАЛИЗАЦИЯ РАСЧËТА")
 
-            # car_data["price_kgs"] = price_kgs
-            # car_data["vat_kgs"] = vat_kzt
-            # car_data["customs_fee_gs"] = customs_fee
-            # car_data["excise_fee_kgs"] = excise_fee
-            # car_data["broker_fee_kgs"] = broker_fee
-            # car_data["total_price_kgs"] = total_cost_kgs
-
             detail_message = (
                 "📝 Детализация расчёта:\n\n"
                 f"Стоимость авто в сомах: <b>{format_number(car_data['price_kgs'])} KGS</b>\n\n"
                 f"Услуги Glory Traders: <b>{format_number(440000 * krw_rate_krg)} KGS</b>\n\n"
-                f"Таможенная ставка: <b>{format_number(car_data['customs_fee_kgs'])}</b> KGS\n\n"
+                f"Таможенная пошлина: <b>{format_number(car_data['customs_fee_kgs'])}</b> KGS\n\n"
                 f"Доставка до Бишкека: <b>{format_number(car_data['delivery_fee_kgs'])}</b> KGS\n\n"
-                f"Услуги брокера: <b>{format_number(car_data["broker_fee_kgs"])} KGS</b>\n\n"
-                f"Общая стоимость автомобиля под ключ до Бишкека: <b>{format_number(car_data["total_price_kgs"])} KGS</b>\n\n"
+                f"Общая стоимость автомобиля под ключ до Бишкека: \n<b>{format_number(car_data["total_price_kgs"])} KGS</b>\n\n"
             )
 
         # Inline buttons for further actions

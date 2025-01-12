@@ -24,6 +24,8 @@ def calculate_customs_fee_kg(engine_volume, car_year):
     # Найти соответствующий диапазон объёма двигателя
     for volume_limit in sorted(year_table.keys()):
         if engine_volume <= volume_limit:
+
+            print(engine_volume, volume_limit)
             return year_table[volume_limit]
 
     # Если объём двигателя превышает все лимиты
@@ -187,13 +189,20 @@ def calculate_utilization_fee(engine_volume: int, year: int) -> int:
     return utilization_fee
 
 
-def calculate_age(year):
-    current_year = datetime.datetime.now().year
-    age = current_year - int(year)
+def calculate_age(year, month):
+    # Убираем ведущий ноль у месяца, если он есть
+    month = int(month.lstrip("0")) if isinstance(month, str) else int(month)
 
-    if age < 3:
+    current_date = datetime.datetime.now()
+    car_date = datetime.datetime(year=int(year), month=month, day=1)
+
+    age_in_months = (
+        (current_date.year - car_date.year) * 12 + current_date.month - car_date.month
+    )
+
+    if age_in_months < 36:
         return f"До 3 лет"
-    elif 3 <= age < 5:
+    elif 36 <= age_in_months < 60:
         return f"от 3 до 5 лет"
     else:
         return f"от 5 лет"
