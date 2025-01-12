@@ -673,7 +673,9 @@ def calculate_cost(country, message):
 
             # Акцизный сбор
             excise_fee_kzt = (
-                (int(engine_volume) - 3000) * 100 if int(engine_volume) > 3000 else 0
+                (int(car_engine_displacement) - 3000) * 100
+                if int(car_engine_displacement) > 3000
+                else 0
             )
 
             # Услуги Glory Traders
