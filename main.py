@@ -4,7 +4,7 @@ import threading
 
 from telebot import types
 from calculator import (
-    calculate_car_cost,
+    calculate_cost,
     get_currency_rates,
     show_country_selection,
     get_nbk_currency_rates,
@@ -132,7 +132,7 @@ def start(message):
 def main_menu(message):
     # Приветственное сообщение
     user_name = message.from_user.first_name
-    greeting = f"👋 Здравствуйте, {user_name}!\n Я бот компании BMAutoExport для расчета стоимости авто из Южной Кореи до стран СНГ! 🚗 \n\n💰 Пожалуйста, выберите действие из меню ниже:"
+    greeting = f"👋 Здравствуйте, {user_name}!\n Я бот компании Glory Traders для расчета стоимости авто из Южной Кореи до стран СНГ! 🚗 \n\n💰 Пожалуйста, выберите действие из меню ниже:"
 
     # Создание кнопочного меню
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -165,7 +165,7 @@ def process_encar_link(message):
         bot.send_message(message.chat.id, f"⏳ Обработка данных...")
 
         # Здесь можно вызвать функцию для расчета стоимости, например:
-        calculate_car_cost(country, message)
+        calculate_cost(country, message)
     else:
         bot.send_message(
             message.chat.id,
