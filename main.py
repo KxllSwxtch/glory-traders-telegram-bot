@@ -273,7 +273,7 @@ def handle_kyrgyzstan(message):
     btn_link = types.KeyboardButton("По ссылке с encar")
     btn_manual = types.KeyboardButton("Ручной ввод")
     btn_main_menu = types.KeyboardButton("Вернуться в главное меню")
-    markup.add(btn_link, btn_manual, btn_main_menu)
+    markup.add(btn_link, btn_main_menu)
 
     bot.send_message(
         message.chat.id,
