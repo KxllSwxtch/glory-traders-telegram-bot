@@ -673,8 +673,8 @@ def calculate_cost(country, message):
             # НДС (12%)
             vat_kzt = car_price_kzt * 0.12
 
-            # Таможенная пошлина (10%)
-            customs_fee_kzt = car_price_kzt * 0.1
+            # Таможенная пошлина (15%)
+            customs_fee_kzt = car_price_kzt * 0.15
 
             # Таможенная декларация
             customs_declaration_fee_kzt = 25152
@@ -997,6 +997,7 @@ def handle_callback_query(call):
                 f"Стоимость авто: <b>{format_number(car_data['price_kzt'])} ₸</b>\n\n"
                 f"НДС (12%): <b>{format_number(car_data['vat_kzt'])} ₸</b>\n\n"
                 f"Таможенная пошлина: <b>{format_number(car_data['customs_fee_kzt'])} ₸</b>\n\n"
+                f"Таможенная декларация: <b>{format_number(car_data['customs_declaration_fee_kzt'])} ₸</b>\n\n"
                 f"Утильсбор: <b>{format_number(car_data['utilization_fee_kzt'])} ₸</b>\n\n"
                 f"Первичная регистрация: <b>{format_number(car_data['first_registration_fee_kzt'])} ₸</b>\n\n"
                 f"Акциз: <b>{format_number(car_data['excise_fee_kzt'])} ₸</b>\n\n"
