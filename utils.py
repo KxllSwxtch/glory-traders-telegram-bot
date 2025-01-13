@@ -14,18 +14,17 @@ def calculate_customs_fee_kg(engine_volume, car_year):
 
     engine_volume = int(engine_volume)
 
-    if car_year not in KGS_CUSTOMS_TABLE:
-        raise ValueError(
-            "Год выпуска автомобиля не найден в таблице таможенных ставок."
-        )
+    # Если год не найден, подбираем ближайший предыдущий год
+    while car_year not in KGS_CUSTOMS_TABLE:
+        car_year -= 1
+        if car_year < min(KGS_CUSTOMS_TABLE.keys()):
+            raise ValueError("Год выпуска автомобиля слишком старый для расчёта.")
 
     year_table = KGS_CUSTOMS_TABLE[car_year]
 
     # Найти соответствующий диапазон объёма двигателя
     for volume_limit in sorted(year_table.keys()):
         if engine_volume <= volume_limit:
-
-            print(engine_volume, volume_limit)
             return year_table[volume_limit]
 
     # Если объём двигателя превышает все лимиты

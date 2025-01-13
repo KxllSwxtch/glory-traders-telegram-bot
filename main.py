@@ -1,5 +1,5 @@
+import re
 import locale
-import asyncio
 import threading
 
 from telebot import types
@@ -9,22 +9,39 @@ from calculator import (
     show_country_selection,
     get_nbk_currency_rates,
     get_nbkr_currency_rates,
+    calculate_cost_manual,
 )
 from config import bot
 
 
 # Переменные
 user_data = {}
+current_country = "Russia"
+current_car_type = "sedan"
 
 # Set locale for number formatting
 locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 
 
+# Обработчик callback
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
+    global current_car_type, current_country
+
+    user_id = call.message.chat.id
+
     if call.data == "calculate_another":
-        # user_data[call.message.chat.id] = {}  # Сброс страны
-        show_country_selection(call.message.chat.id)
+        # Сбрасываем данные пользователя
+        user_data[user_id] = {}
+        current_country = None
+        current_car_type = None
+
+        show_country_selection(user_id)
+    elif call.data in ["sedan", "crossover"]:
+        handle_car_type_selection(call)
+
+    elif call.data == "main_menu":
+        main_menu(call.message)
 
 
 # Функция для установки команд меню
@@ -130,9 +147,13 @@ def start(message):
 # Главное меню
 @bot.message_handler(func=lambda message: message.text == "Вернуться в главное меню")
 def main_menu(message):
+    user_id = message.chat.id
+
+    user_data[user_id] = {}
+
     # Приветственное сообщение
     user_name = message.from_user.first_name
-    greeting = f"👋 Здравствуйте, {user_name}!\n Я бот компании Glory Traders для расчета стоимости авто из Южной Кореи до стран СНГ! 🚗 \n\n💰 Пожалуйста, выберите действие из меню ниже:"
+    greeting = f"Здравствуйте, {user_name}!\n Я бот компании Glory Traders для расчета стоимости авто из Южной Кореи до стран СНГ! 🚗 \n\n💰 Пожалуйста, выберите действие из меню ниже:"
 
     # Создание кнопочного меню
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -205,11 +226,220 @@ def handle_link_input(message):
 # Ручной расчёт
 @bot.message_handler(func=lambda message: message.text == "Ручной ввод")
 def handle_manual_input(message):
+    user_data[message.chat.id] = {"step": "year"}
     bot.send_message(
         message.chat.id,
-        "Пожалуйста, укажите данные автомобиля для расчёта:\n\n"
-        "Год выпуска, объём двигателя, цена в Корее (в вонах) (например: 2022 2497cc 25000000).",
+        "📅 Укажите год выпуска автомобиля (например: 2022):",
     )
+
+
+@bot.message_handler(
+    func=lambda message: message.chat.id in user_data
+    and "step" in user_data[message.chat.id]
+)
+def process_manual_input(message):
+    global current_country, current_car_type
+
+    user_id = message.chat.id
+
+    # Проверка, если шаг - выбор типа кузова
+    if user_data[user_id].get("step") == "car_type":
+        if message.text.lower() in ["седан", "кроссовер"]:
+            current_car_type = (
+                "sedan" if message.text.lower() == "седан" else "crossover"
+            )
+            user_data[user_id]["step"] = None
+
+            # Получаем данные для расчёта
+            year = user_data[user_id]["year"]
+            month = user_data[user_id]["month"]
+            engine_volume = user_data[user_id]["engine_volume"]
+            price = user_data[user_id]["price"]
+
+            # Выполняем расчёт стоимости
+            calculate_manual_cost(
+                message,
+                year,
+                month,
+                engine_volume,
+                price,
+                current_country,
+                current_car_type,
+            )
+        else:
+            bot.send_message(
+                user_id,
+                "🚫 Пожалуйста, выберите корректный тип кузова: Седан или Кроссовер.",
+            )
+        return
+
+    # Далее логика обработки остальных шагов
+    step = user_data[user_id].get("step")
+
+    if step == "year":
+        if message.text.isdigit() and 1900 <= int(message.text) <= 2025:
+            user_data[user_id]["year"] = int(message.text)
+            user_data[user_id]["step"] = "month"
+            bot.send_message(
+                user_id,
+                "📅 Укажите месяц выпуска автомобиля (например: 8 для августа):",
+            )
+        else:
+            bot.send_message(
+                user_id,
+                "🚫 Пожалуйста, введите корректный год (например: 2022).",
+            )
+
+    elif step == "month":
+        try:
+            month = int(message.text)
+            if 1 <= month <= 12:
+                user_data[user_id]["month"] = month
+                user_data[user_id]["step"] = "engine_volume"
+                bot.send_message(
+                    user_id,
+                    "🔧 Укажите объём двигателя в куб. см (например: 2497):",
+                )
+            else:
+                bot.send_message(
+                    user_id,
+                    "🚫 Пожалуйста, введите корректный месяц (от 1 до 12).",
+                )
+        except ValueError:
+            bot.send_message(
+                user_id,
+                "🚫 Пожалуйста, введите корректный месяц (от 1 до 12).",
+            )
+
+    elif step == "engine_volume":
+        if message.text.isdigit() and int(message.text) > 0:
+            user_data[user_id]["engine_volume"] = int(message.text)
+            user_data[user_id]["step"] = "price"
+            bot.send_message(
+                user_id,
+                "💰 Укажите цену автомобиля в Корее (в вонах) (например: 25000000):",
+            )
+        else:
+            bot.send_message(
+                user_id,
+                "🚫 Пожалуйста, введите корректный объём двигателя (например: 2497).",
+            )
+
+    elif step == "price":
+        if message.text.isdigit() and int(message.text) > 0:
+            user_data[user_id]["price"] = int(message.text)
+
+            # Если страна — Кыргызстан, запрашиваем тип кузова
+            if current_country == "Kyrgyzstan":
+                user_data[user_id]["step"] = "car_type"
+
+                # Создаем клавиатуру с кнопками для выбора типа кузова
+                keyboard = types.ReplyKeyboardMarkup(
+                    resize_keyboard=True, one_time_keyboard=True
+                )
+                keyboard.add("Седан", "Кроссовер")
+
+                bot.send_message(
+                    user_id,
+                    "Пожалуйста, выберите тип кузова автомобиля:",
+                    reply_markup=keyboard,
+                )
+            else:
+                user_data[user_id]["step"] = None
+                year = user_data[user_id]["year"]
+                month = user_data[user_id]["month"]
+                engine_volume = user_data[user_id]["engine_volume"]
+                price = user_data[user_id]["price"]
+                calculate_manual_cost(
+                    message, year, month, engine_volume, price, current_country
+                )
+        else:
+            bot.send_message(
+                user_id,
+                "🚫 Пожалуйста, введите корректную цену (например: 25000000).",
+            )
+
+
+# Обработка выбора типа кузова
+def handle_car_type_selection(call):
+    global current_car_type, current_country
+
+    user_id = call.message.chat.id
+
+    # Сохраняем выбранный тип кузова
+    current_car_type = call.data
+    user_data[user_id]["step"] = None
+
+    # Получаем данные для расчёта
+    year = user_data[user_id]["year"]
+    month = user_data[user_id]["month"]
+    engine_volume = user_data[user_id]["engine_volume"]
+    price = user_data[user_id]["price"]
+
+    # Выполняем расчёт стоимости
+    calculate_manual_cost(
+        call.message,
+        year,
+        month,
+        engine_volume,
+        price,
+        current_country,
+        current_car_type,
+    )
+
+
+def calculate_manual_cost(
+    message, year, month, engine_volume, price, country, car_type=None
+):
+    global current_car_type, current_country
+
+    try:
+        # Вызываем функцию расчёта стоимости из calculator.py
+        result_message = calculate_cost_manual(
+            country, year, month, engine_volume, price, car_type
+        )
+
+        # Создаём клавиатуру с кнопками
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(
+            types.InlineKeyboardButton(
+                "Рассчитать стоимость другого автомобиля",
+                callback_data="calculate_another",
+            )
+        )
+        keyboard.add(
+            types.InlineKeyboardButton(
+                "Вернуться в главное меню", callback_data="main_menu"
+            )
+        )
+
+        # Отправляем сообщение с результатом и клавиатурой
+        bot.send_message(
+            message.chat.id, result_message, parse_mode="HTML", reply_markup=keyboard
+        )
+
+        # Сбрасываем данные пользователя
+        user_id = message.chat.id
+        user_data[user_id] = {}
+        current_country = None
+        current_car_type = None
+
+    except Exception as e:
+        bot.send_message(
+            message.chat.id,
+            "🚫 Произошла ошибка при расчёте. Попробуйте снова.",
+        )
+        print(f"Ошибка при расчёте: {e}")
+
+
+def show_calculation_options(chat_id):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn_link = types.KeyboardButton("По ссылке с encar")
+    btn_manual = types.KeyboardButton("Ручной ввод")
+    btn_main_menu = types.KeyboardButton("Вернуться в главное меню")
+    markup.add(btn_link, btn_manual, btn_main_menu)
+
+    bot.send_message(chat_id, "Выберите способ расчёта:", reply_markup=markup)
 
 
 ###############
@@ -217,19 +447,12 @@ def handle_manual_input(message):
 ###############
 @bot.message_handler(func=lambda message: message.text == "🇷🇺 Россия")
 def handle_russia(message):
+    global current_country
+
+    current_country = "Russia"
     user_data[message.chat.id] = {"country": "Russia"}
-
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_link = types.KeyboardButton("По ссылке с encar")
-    btn_manual = types.KeyboardButton("Ручной ввод")
-    btn_main_menu = types.KeyboardButton("Вернуться в главное меню")
-    markup.add(btn_link, btn_main_menu)
-
-    bot.send_message(
-        message.chat.id,
-        "Выберите способ расчёта:",
-        reply_markup=markup,
-    )
+    print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
+    show_calculation_options(message.chat.id)
 
 
 ###############
@@ -242,19 +465,11 @@ def handle_russia(message):
 ##############
 @bot.message_handler(func=lambda message: message.text == "🇰🇿 Казахстан")
 def handle_kazakhstan(message):
+    global current_country
+    current_country = "Kazakhstan"
     user_data[message.chat.id] = {"country": "Kazakhstan"}
-
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_link = types.KeyboardButton("По ссылке с encar")
-    btn_manual = types.KeyboardButton("Ручной ввод")
-    btn_main_menu = types.KeyboardButton("Вернуться в главное меню")
-    markup.add(btn_link, btn_main_menu)
-
-    bot.send_message(
-        message.chat.id,
-        "Выберите способ расчёта:",
-        reply_markup=markup,
-    )
+    print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
+    show_calculation_options(message.chat.id)
 
 
 ##############
@@ -267,19 +482,12 @@ def handle_kazakhstan(message):
 ##############
 @bot.message_handler(func=lambda message: message.text == "🇰🇬 Кыргызстан")
 def handle_kyrgyzstan(message):
+    global current_country
+
+    current_country = "Kyrgyzstan"
     user_data[message.chat.id] = {"country": "Kyrgyzstan"}
-
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_link = types.KeyboardButton("По ссылке с encar")
-    btn_manual = types.KeyboardButton("Ручной ввод")
-    btn_main_menu = types.KeyboardButton("Вернуться в главное меню")
-    markup.add(btn_link, btn_main_menu)
-
-    bot.send_message(
-        message.chat.id,
-        "Выберите способ расчёта:",
-        reply_markup=markup,
-    )
+    print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
+    show_calculation_options(message.chat.id)
 
 
 ##############

@@ -1112,3 +1112,154 @@ def handle_callback_query(call):
 
     elif call.data == "calculate_another":
         show_country_selection(call.message.chat.id)
+
+
+# Расчёты для ручного ввода
+def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
+    if country == "Russia":
+        print_message("Выполняется ручной расчёт стоимости для России")
+
+        # Конвертируем стоимость авто в рубли
+        price_krw = int(price)
+        car_price_rub = price_krw * (krw_rub_rate + 0.0198)
+        horsepower = calculate_horse_power(engine_volume)
+        customs_fee = calculate_customs_fee(car_price_rub)
+        recycling_fee = calculate_recycling_fee(engine_volume)
+        customs_duty = calculate_customs_duty(engine_volume, eur_rub_rate)
+        excise_fee = calculate_excise_russia(horsepower)
+
+        total_cost = (
+            car_price_rub
+            + customs_fee
+            + recycling_fee
+            + customs_duty
+            + excise_fee
+            + 110000  # Логистика до Владивостока
+            + 120000  # Брокерские услуги
+            + (440000 * krw_rub_rate)  # Услуги компании
+            + 92279  # Прочие расходы
+        )
+
+        result_message = (
+            f"Расчёты для автомобиля:\n\n"
+            f"Дата: <i>{str(year)}/{str(month)}</i>\nОбъём: <b>{format_number(engine_volume)} cc</b>\nЦена в Корее: <b>{format_number(price)} ₩</b>\n"
+            f"Под ключ до Владивостока: <b>{format_number(total_cost)}</b> ₽\n\n"
+            f"Цены могут варьироваться в зависимости от курса, для более подробной информации пишите @GLORY_TRADERS"
+        )
+
+        return result_message
+    elif country == "Kazakhstan":
+        print_message("Выполняется ручной расчёт стоимости для Казахстана")
+
+        # Конвертируем цену авто в тенге
+        car_price_kzt = price * krw_rate_kz
+
+        # НДС (12%)
+        vat_kzt = car_price_kzt * 0.12
+
+        # Таможенная пошлина (15%)
+        customs_fee_kzt = car_price_kzt * 0.15
+
+        # Таможенная декларация
+        customs_declaration_fee_kzt = 25152
+
+        # Утильсбор
+        engine_volume = int(engine_volume)
+        base_utilization_fee_kzt = 200000  # Базовая ставка
+
+        # Определяем коэффициент
+        if engine_volume <= 1000:
+            coefficient = 0.5
+        elif engine_volume <= 2000:
+            coefficient = 1.0
+        elif engine_volume <= 3000:
+            coefficient = 2.0
+        elif engine_volume <= 4000:
+            coefficient = 3.0
+        else:
+            coefficient = 4.0
+
+        # Рассчитываем утильсбор
+        utilization_fee_kzt = base_utilization_fee_kzt * coefficient
+
+        # Акцизный сбор
+        excise_fee_kzt = (
+            (int(engine_volume) - 3000) * 100 if int(engine_volume) > 3000 else 0
+        )
+
+        # Услуги Glory Traders
+        glory_traders_fee_kzt = 450000 * krw_rate_kz
+
+        # Услуги брокера
+        broker_fee_kzt = 100000
+
+        # Доставка (логистика по Корее + до Алматы)
+        delivery_fee_kzt = 2500 * usd_rate_kz
+        fraht_fee_kzt = 500 * usd_rate_kz
+
+        # Сертификация (СБКТС)
+        sbkts_fee_kzt = 60000
+
+        # Расчет первичной регистрации
+        mpr = 3932  # Минимальный расчетный показатель в тенге на 2025 год
+
+        if year >= datetime.datetime.now().year - 2:
+            registration_fee_kzt = 0.25 * mpr  # До 2 лет
+        elif year >= datetime.datetime.now().year - 3:
+            registration_fee_kzt = 50 * mpr  # От 2 до 3 лет
+        else:
+            registration_fee_kzt = 500 * mpr  # Старше 3 лет
+
+        # Итоговая стоимость
+        total_cost_kzt = (
+            car_price_kzt
+            + vat_kzt
+            + customs_fee_kzt
+            + customs_declaration_fee_kzt
+            + excise_fee_kzt
+            + glory_traders_fee_kzt
+            + broker_fee_kzt
+            + delivery_fee_kzt
+            + fraht_fee_kzt
+            + sbkts_fee_kzt
+            + utilization_fee_kzt
+            + registration_fee_kzt
+        )
+        result_message = (
+            f"Расчёты для автомобиля:\n\n"
+            f"Дата: <i>{str(year)}/{str(month)}</i>\nОбъём: <b>{format_number(engine_volume)} cc</b>\nЦена в Корее: <b>{format_number(price)} ₩</b>\n"
+            f"Под ключ до Алматы: <b>{format_number(total_cost_kzt)}</b> ₸\n\n"
+            f"Цены могут варьироваться в зависимости от курса, для более подробной информации пишите @GLORY_TRADERS"
+        )
+
+        return result_message
+    elif country == "Kyrgyzstan":
+        print_message("Выполняется ручной расчёт стоимости для Кыргызстана")
+
+        print(year)
+
+        price_kgs = price * krw_rate_krg
+        customs_fee_kgs_usd = calculate_customs_fee_kg(engine_volume, year)
+        customs_fee_kgs = customs_fee_kgs_usd * usd_rate_krg
+        if car_type == "sedan":
+            delivery_fee = 2400 * usd_rate_krg
+        elif car_type == "crossover":
+            delivery_fee = 2500 * usd_rate_krg
+        else:
+            delivery_fee = 2600 * usd_rate_krg
+
+        # Полная стоимость
+        total_cost_kgs = (
+            price_kgs + customs_fee_kgs + delivery_fee + (440000 * krw_rate_krg)
+        )
+
+        result_message = (
+            f"Расчёты для автомобиля:\n\n"
+            f"Дата: <i>{str(year)}/{str(month)}</i>\nОбъём: <b>{format_number(engine_volume)} cc</b>\nЦена в Корее: <b>{format_number(price)} ₩</b>\n"
+            f"Под ключ до Бишкека: <b>{format_number(total_cost_kgs)}</b> KGS\n\n"
+            f"Цены могут варьироваться в зависимости от курса, для более подробной информации пишите @GLORY_TRADERS"
+        )
+
+        return result_message
+    else:
+        return "🚫 Неизвестная страна."
