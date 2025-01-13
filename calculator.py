@@ -1003,7 +1003,7 @@ def handle_callback_query(call):
                 f"Первичная регистрация: <b>{format_number(car_data['first_registration_fee_kzt'])} ₸</b>\n\n"
                 f"Акциз: <b>{format_number(car_data['excise_fee_kzt'])} ₸</b>\n\n"
                 f"Итоговая стоимость под ключ до Алматы: <b>{format_number(car_data['total_price_kzt'])} ₸</b>\n\n"
-                f"<b>ПРИМЕЧАНИЕ: ЦЕНА НА АВТОМОБИЛЬ ЗАВИСИТ ОТ ТЕКУЩЕГО КУРСА, ДЛЯ БОЛЕЕ ТОЧНОЙ ИНФОРМАЦИИ НАПИШИТЕ НАШЕМУ МЕНЕДЖЕРУ @GLORY_TRADERS</b>
+                f"<b>ПРИМЕЧАНИЕ: ЦЕНА НА АВТОМОБИЛЬ ЗАВИСИТ ОТ ТЕКУЩЕГО КУРСА, ДЛЯ БОЛЕЕ ТОЧНОЙ ИНФОРМАЦИИ НАПИШИТЕ НАШЕМУ МЕНЕДЖЕРУ @GLORY_TRADERS</b>"
             )
 
         if current_country == "Kyrgyzstan":
@@ -1016,7 +1016,7 @@ def handle_callback_query(call):
                 f"Таможенная пошлина: <b>{format_number(car_data['customs_fee_kgs'])}</b> KGS\n\n"
                 f"Доставка до Бишкека: <b>{format_number(car_data['delivery_fee_kgs'])}</b> KGS\n\n"
                 f"Общая стоимость автомобиля под ключ до Бишкека: \n<b>{format_number(car_data["total_price_kgs"])} KGS</b>\n\n"
-                f"<b>ПРИМЕЧАНИЕ: ЦЕНА НА АВТОМОБИЛЬ ЗАВИСИТ ОТ ТЕКУЩЕГО КУРСА, ДЛЯ БОЛЕЕ ТОЧНОЙ ИНФОРМАЦИИ НАПИШИТЕ НАШЕМУ МЕНЕДЖЕРУ @GLORY_TRADERS</b>
+                f"<b>ПРИМЕЧАНИЕ: ЦЕНА НА АВТОМОБИЛЬ ЗАВИСИТ ОТ ТЕКУЩЕГО КУРСА, ДЛЯ БОЛЕЕ ТОЧНОЙ ИНФОРМАЦИИ НАПИШИТЕ НАШЕМУ МЕНЕДЖЕРУ @GLORY_TRADERS</b>"
             )
 
         # Inline buttons for further actions
