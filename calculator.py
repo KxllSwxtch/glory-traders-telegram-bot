@@ -2,15 +2,12 @@ import telebot
 import time
 import psycopg2
 import os
-import sys
 import re
 import requests
-import locale
 import datetime
 import logging
 import xml.etree.ElementTree as ET
 
-from twocaptcha import TwoCaptcha
 from telebot import types
 from dotenv import load_dotenv
 from seleniumwire import webdriver
@@ -25,6 +22,7 @@ from requests.exceptions import ConnectionError, ReadTimeout
 # utils.py import
 from config import bot
 from utils import (
+    clear_memory,
     calculate_utilization_fee,
     format_number,
     print_message,
@@ -105,6 +103,8 @@ def show_country_selection(chat_id):
 def get_nbkr_currency_rates():
     global usd_rate_krg, krw_rate_krg
 
+    clear_memory()
+
     print_message("[КУРС] КЫРГЫЗСТАН")
 
     url = "https://www.nbkr.kg/XML/daily.xml"
@@ -176,6 +176,8 @@ def get_nbkr_currency_rates():
 def get_nbk_currency_rates():
     print_message("[КУРС] КАЗАХСТАН")
 
+    clear_memory()
+
     global usd_rate_kz, krw_rate_kz
 
     url = "https://nationalbank.kz/rss/rates_all.xml"
@@ -236,6 +238,8 @@ def get_nbk_currency_rates():
 # Курс валют для России
 def get_currency_rates():
     global krw_rub_rate, eur_rub_rate
+
+    clear_memory()
 
     print_message("[КУРС] РОССИЯ")
 
@@ -1238,8 +1242,6 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         return result_message
     elif country == "Kyrgyzstan":
         print_message("Выполняется ручной расчёт стоимости для Кыргызстана")
-
-        print(year)
 
         price_kgs = price * krw_rate_krg
         customs_fee_kgs_usd = calculate_customs_fee_kg(engine_volume, year)

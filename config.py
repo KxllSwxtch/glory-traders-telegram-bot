@@ -1,5 +1,7 @@
 import os
 import telebot
+
+from telebot.async_telebot import AsyncTeleBot
 from dotenv import load_dotenv
 
 

@@ -1,6 +1,12 @@
+import gc
 import datetime
 import locale
 from kgs_customs_table import KGS_CUSTOMS_TABLE
+
+
+# Очищение памяти
+def clear_memory():
+    gc.collect()
 
 
 def calculate_customs_fee_kg(engine_volume, car_year):
