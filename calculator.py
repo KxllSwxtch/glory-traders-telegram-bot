@@ -17,11 +17,11 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib.parse import urlparse, parse_qs
 from selenium.webdriver.support import expected_conditions as EC
-from requests.exceptions import ConnectionError, ReadTimeout
 
 # utils.py import
 from config import bot
 from utils import (
+    calculate_excise_by_volume,
     clear_memory,
     calculate_utilization_fee,
     format_number,
@@ -565,30 +565,58 @@ def calculate_cost(country, message):
         if current_country == "Russia":
             print_message("Выполняется расчёт стоимости для России")
 
+            year, month = 0, 0
+            if len(car_date) > 6:
+                year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
+                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
+            else:
+                year = int(f"20{car_date[-2:]}")
+                month = int(car_date[2:4])
+
+            age_formatted = calculate_age(year, month)
+            engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
+
             # Конвертируем стоимость авто в рубли
             price_krw = int(car_price) * 10000
-            car_price_rub = price_krw * (krw_rub_rate + 0.0198)
+            car_price_rub = price_krw * krw_rub_rate
 
             # Рассчитываем мощность двигателя в л.с.
             horsepower = calculate_horse_power(car_engine_displacement)
 
-            # Рассчитываем таможенный сбор
             customs_fee = calculate_customs_fee(car_price_rub)
 
+            # Рассчитываем таможенный сбор
+            car_price_eur = car_price_rub / eur_rub_rate
+            customs_duty = calculate_customs_duty(
+                car_price_eur, int(car_engine_displacement), eur_rub_rate, age_formatted
+            )
+
             # Рассчитываем утилизационный сбор
-            recycling_fee = calculate_recycling_fee(car_engine_displacement)
+            recycling_fee = calculate_recycling_fee(
+                int(car_engine_displacement), age_formatted
+            )
 
             # Рассчитываем таможенную пошлину
-            customs_duty = calculate_customs_duty(car_engine_displacement, eur_rub_rate)
+            # customs_duty = calculate_customs_duty(car_engine_displacement, eur_rub_rate)
 
-            excise_fee = calculate_excise_russia(horsepower)
+            excise_fee = calculate_excise_by_volume(
+                engine_volume=int(car_engine_displacement)
+            )
+
+            print(
+                car_price_rub,
+                customs_fee,
+                recycling_fee,
+                excise_fee,
+                car_price_rub + customs_fee + recycling_fee + excise_fee,
+            )
 
             # Расчет итоговой стоимости автомобиля
             total_cost = (
                 car_price_rub
                 + customs_fee
-                + recycling_fee
                 + customs_duty
+                + recycling_fee
                 + excise_fee
                 + 110000  # Логистика до Владивостока
                 + 120000  # Брокерские услуги
@@ -602,17 +630,6 @@ def calculate_cost(country, message):
             car_data["total_price"] = total_cost
             car_data["customs_duty_fee"] = customs_duty
             car_data["excise"] = excise_fee
-
-            year, month = 0, 0
-            if len(car_date) > 6:
-                year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")
-                month = int(re.sub(r"\D", "", car_date.split(" ")[1]))
-            else:
-                year = int(f"20{car_date[-2:]}")
-                month = int(car_date[2:4])
-
-            age_formatted = calculate_age(year, month)
-            engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
 
@@ -986,8 +1003,8 @@ def handle_callback_query(call):
                 f"Стомость автомобиля: {format_number(car_data['price_rub'])} ₽\n\n"
                 f"Таможенный cбор: {format_number(car_data['duty'])} ₽\n\n"
                 f"Таможенная пошлина: {format_number(car_data['customs_duty_fee'])} ₽\n\n"
-                f"Утильсбор: {format_number(car_data['recycling_fee'])} ₽\n\n"
-                f"Акциза: {format_number(car_data['excise'])} ₽\n\n"
+                f"Утилизационный сбор: {format_number(car_data['recycling_fee'])} ₽\n\n"
+                # f"Акциза: {format_number(car_data['excise'])} ₽\n\n"
                 f"Логистика до Владивостока: 110,000 ₽\n\n"
                 f"Услуги брокера: 120,000 ₽\n\n"
                 f"<b>Итоговая стоимость автомобиля: {format_number(car_data['total_price'])} ₽</b>\n\n"
