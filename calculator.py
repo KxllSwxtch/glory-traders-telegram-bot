@@ -1140,6 +1140,8 @@ def handle_callback_query(call):
 
 # Расчёты для ручного ввода
 def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
+    global eur_rub_rate
+
     if country == "Russia":
         print_message("Выполняется ручной расчёт стоимости для России")
 
@@ -1147,10 +1149,13 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         age_formatted = calculate_age(year, month)
         price_krw = int(price)
         car_price_rub = price_krw * (krw_rub_rate + 0.0198)
+        car_price_euro = car_price_rub / eur_rub_rate
         horsepower = calculate_horse_power(engine_volume)
         customs_fee = calculate_customs_fee(car_price_rub)
         recycling_fee = calculate_recycling_fee(engine_volume, age_formatted)
-        customs_duty = calculate_customs_duty(engine_volume, eur_rub_rate)
+        customs_duty = calculate_customs_duty(
+            car_price_euro, engine_volume, eur_rub_rate, age_formatted
+        )
         excise_fee = calculate_excise_russia(horsepower)
 
         total_cost = (
