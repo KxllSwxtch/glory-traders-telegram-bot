@@ -1144,11 +1144,12 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         print_message("Выполняется ручной расчёт стоимости для России")
 
         # Конвертируем стоимость авто в рубли
+        age_formatted = calculate_age(year, month)
         price_krw = int(price)
         car_price_rub = price_krw * (krw_rub_rate + 0.0198)
         horsepower = calculate_horse_power(engine_volume)
         customs_fee = calculate_customs_fee(car_price_rub)
-        recycling_fee = calculate_recycling_fee(engine_volume)
+        recycling_fee = calculate_recycling_fee(engine_volume, age_formatted)
         customs_duty = calculate_customs_duty(engine_volume, eur_rub_rate)
         excise_fee = calculate_excise_russia(horsepower)
 
