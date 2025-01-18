@@ -237,7 +237,7 @@ def calculate_age(year, month):
     elif 36 <= age_in_months < 60:
         return f"от 3 до 5 лет"
     else:
-        return f"от 5 лет"
+        return f"старше 5 лет"
 
 
 def format_number(number):

@@ -605,15 +605,13 @@ def calculate_cost(country, message):
 
             # Расчет итоговой стоимости автомобиля
             total_cost = (
-                car_price_rub
-                + customs_fee
+                (1000 * usd_rate)
+                + (250 * usd_rate)
+                + 120000
                 + customs_duty
                 + recycling_fee
-                + excise_fee
-                + 110000  # Логистика до Владивостока
-                + 120000  # Брокерские услуги
-                + (440000 * krw_rub_rate)  # Услуги компании
-                + 92279  # Прочие расходы
+                + 440000 * krw_rub_rate
+                + car_price_rub
             )
 
             car_data["price_rub"] = car_price_rub
@@ -1151,21 +1149,26 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         excise_fee = calculate_excise_by_volume(engine_volume=int(engine_volume))
 
         total_cost = (
-            car_price_rub
-            + customs_fee
-            + recycling_fee
+            (1000 * usd_rate)
+            + (250 * usd_rate)
+            + 120000
             + customs_duty
-            + excise_fee
-            + 110000  # Логистика до Владивостока
-            + 120000  # Брокерские услуги
-            + (440000 * krw_rub_rate)  # Услуги компании
-            + 92279  # Прочие расходы
+            + recycling_fee
+            + 440000 * krw_rub_rate
+            + car_price_rub
         )
 
         result_message = (
             f"Расчёты для автомобиля:\n\n"
             f"Дата: <i>{str(year)}/{str(month)}</i>\nОбъём: <b>{format_number(engine_volume)} cc</b>\nЦена в Корее: <b>{format_number(price)} ₩</b>\n"
-            f"Под ключ до Владивостока: <b>{format_number(total_cost)}</b> ₽\n\n"
+            f"Под ключ до Владивостока: <b>{format_number(total_cost)}</b> ₽\n\n\n"
+            f"Логистика c Кореи до Владивостока\n"
+            f"- 1000$ (может меняться)\n"
+            f"- Комиссия компании: 250$\n\n"
+            f"Расходы по РФ\n"
+            f"- Услуги брокера\n- Выгрузка\n- СВХ (в порту)\n- Лаборатория\n- Получение ЭСБГТС и ЭПТС\n<b>Итого: от 80,000 ₽ до 120,000 ₽</b>\n\n"
+            f"Таможенная ставка: <b>{format_number(customs_duty)} ₽</b>\n"
+            f"Утильсбор: <b>{format_number(recycling_fee)} ₽</b>\n\n"
             f"Цены могут варьироваться в зависимости от курса, для более подробной информации пишите @GLORY_TRADERS"
         )
 
