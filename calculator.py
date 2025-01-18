@@ -23,10 +23,8 @@ from config import bot
 from utils import (
     calculate_excise_by_volume,
     clear_memory,
-    calculate_utilization_fee,
     format_number,
     print_message,
-    calculate_duty,
     calculate_age,
     calculate_horse_power,
     calculate_customs_fee,
@@ -581,14 +579,18 @@ def calculate_cost(country, message):
             car_price_rub = price_krw * krw_rub_rate
 
             # Рассчитываем мощность двигателя в л.с.
-            horsepower = calculate_horse_power(car_engine_displacement)
+            # horsepower = calculate_horse_power(car_engine_displacement)
 
+            # Таможенный сбор
             customs_fee = calculate_customs_fee(car_price_rub)
 
-            # Рассчитываем таможенный сбор
+            # Таможенная пошлина
             car_price_eur = car_price_rub / eur_rub_rate
             customs_duty = calculate_customs_duty(
-                car_price_eur, int(car_engine_displacement), eur_rub_rate, age_formatted
+                car_price_eur,
+                int(car_engine_displacement),
+                (eur_rub_rate + 3),
+                age_formatted,
             )
 
             # Рассчитываем утилизационный сбор
@@ -596,19 +598,9 @@ def calculate_cost(country, message):
                 int(car_engine_displacement), age_formatted
             )
 
-            # Рассчитываем таможенную пошлину
             # customs_duty = calculate_customs_duty(car_engine_displacement, eur_rub_rate)
-
             excise_fee = calculate_excise_by_volume(
                 engine_volume=int(car_engine_displacement)
-            )
-
-            print(
-                car_price_rub,
-                customs_fee,
-                recycling_fee,
-                excise_fee,
-                car_price_rub + customs_fee + recycling_fee + excise_fee,
             )
 
             # Расчет итоговой стоимости автомобиля
@@ -1150,13 +1142,13 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         price_krw = int(price)
         car_price_rub = price_krw * krw_rub_rate
         car_price_euro = car_price_rub / eur_rub_rate
-        horsepower = calculate_horse_power(engine_volume)
+        # horsepower = calculate_horse_power(engine_volume)
         customs_fee = calculate_customs_fee(car_price_rub)
-        recycling_fee = calculate_recycling_fee(engine_volume, age_formatted)
+        recycling_fee = calculate_recycling_fee(int(engine_volume), age_formatted)
         customs_duty = calculate_customs_duty(
-            car_price_euro, engine_volume, eur_rub_rate, age_formatted
+            car_price_euro, int(engine_volume), (eur_rub_rate + 3), age_formatted
         )
-        excise_fee = calculate_excise_russia(horsepower)
+        excise_fee = calculate_excise_by_volume(engine_volume=int(engine_volume))
 
         total_cost = (
             car_price_rub
