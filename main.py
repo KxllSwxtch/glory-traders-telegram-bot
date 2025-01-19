@@ -538,4 +538,4 @@ if __name__ == "__main__":
     run_in_thread(get_currency_rates)
 
     # Основной поток выполняет бот
-    bot.polling(none_stop=True, timeout=60, long_polling_timeout=20)
+    bot.polling(none_stop=True)
