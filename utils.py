@@ -86,9 +86,6 @@ def calculate_customs_duty(car_price_euro, engine_volume, euro_to_rub_rate, age)
     Рассчитывает таможенную пошлину для РФ в зависимости от стоимости автомобиля в евро,
     объема двигателя, курса евро к рублю и возраста автомобиля.
     """
-
-    print(age)
-
     engine_volume = int(engine_volume)
 
     # Для автомобилей младше 3 лет

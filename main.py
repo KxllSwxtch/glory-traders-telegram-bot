@@ -123,6 +123,10 @@ def cbr_command(message):
 # Самый старт
 @bot.message_handler(commands=["start"])
 def start(message):
+    run_in_thread(get_nbkr_currency_rates)
+    run_in_thread(get_nbk_currency_rates)
+    run_in_thread(get_currency_rates)
+
     user_name = message.from_user.first_name
 
     # Приветственное сообщение
@@ -533,9 +537,5 @@ def run_in_thread(target):
 if __name__ == "__main__":
     # Запуск длительных задач в отдельных потоках
     run_in_thread(set_bot_commands)
-    run_in_thread(get_nbkr_currency_rates)
-    run_in_thread(get_nbk_currency_rates)
-    run_in_thread(get_currency_rates)
-
     # Основной поток выполняет бот
     bot.polling(none_stop=True)
