@@ -538,6 +538,8 @@ def calculate_cost(country, message):
         if current_country == "Russia":
             print_message("Выполняется расчёт стоимости для России")
 
+            print(car_price, car_date, car_engine_displacement)
+
             year, month = 0, 0
             if len(car_date) > 6:
                 year = int(f"20{re.sub(r"\D", "", car_date.split(" ")[0])}")

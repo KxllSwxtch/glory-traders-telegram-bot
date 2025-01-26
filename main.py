@@ -138,7 +138,7 @@ def start(message):
     btn_instagram = types.KeyboardButton("Instagram")
     btn_whatsapp = types.KeyboardButton("WhatsApp")
     btn_telegram = types.KeyboardButton("Telegram-канал")
-    btn_manager = types.KeyboardButton("Написать менеджеру")
+    btn_manager = types.KeyboardButton("Контакты")
 
     # Добавление кнопок в меню
     markup.add(btn_calc, btn_instagram, btn_whatsapp, btn_telegram, btn_manager)
@@ -164,7 +164,7 @@ def main_menu(message):
     btn_instagram = types.KeyboardButton("Instagram")
     btn_whatsapp = types.KeyboardButton("WhatsApp")
     btn_telegram = types.KeyboardButton("Telegram-канал")
-    btn_manager = types.KeyboardButton("Написать менеджеру")
+    btn_manager = types.KeyboardButton("Контакты")
 
     # Добавление кнопок в меню
     markup.add(btn_calc, btn_instagram, btn_whatsapp, btn_telegram, btn_manager)
@@ -522,9 +522,12 @@ def handle_telegram_channel(message):
     )
 
 
-@bot.message_handler(func=lambda message: message.text == "Написать менеджеру")
+@bot.message_handler(func=lambda message: message.text == "Контакты")
 def handle_manager(message):
-    bot.send_message(message.chat.id, "Напишите нам напрямую: @GLORY_TRADERS")
+    bot.send_message(
+        message.chat.id,
+        "+79035957700 - Геннадий (Москва)\n@GLORY_TRADERS - Вячеслав (Корея)\n",
+    )
 
 
 def run_in_thread(target):
