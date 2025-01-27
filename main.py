@@ -123,10 +123,6 @@ def cbr_command(message):
 # Самый старт
 @bot.message_handler(commands=["start"])
 def start(message):
-    run_in_thread(get_nbkr_currency_rates)
-    run_in_thread(get_nbk_currency_rates)
-    run_in_thread(get_currency_rates)
-
     user_name = message.from_user.first_name
 
     # Приветственное сообщение
@@ -451,6 +447,7 @@ def show_calculation_options(chat_id):
 @bot.message_handler(func=lambda message: message.text == "🇷🇺 Россия")
 def handle_russia(message):
     global current_country
+    run_in_thread(get_currency_rates)
 
     current_country = "Russia"
     user_data[message.chat.id] = {"country": "Russia"}
@@ -469,6 +466,7 @@ def handle_russia(message):
 @bot.message_handler(func=lambda message: message.text == "🇰🇿 Казахстан")
 def handle_kazakhstan(message):
     global current_country
+    run_in_thread(get_nbk_currency_rates)
     current_country = "Kazakhstan"
     user_data[message.chat.id] = {"country": "Kazakhstan"}
     print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
@@ -486,6 +484,7 @@ def handle_kazakhstan(message):
 @bot.message_handler(func=lambda message: message.text == "🇰🇬 Кыргызстан")
 def handle_kyrgyzstan(message):
     global current_country
+    run_in_thread(get_nbkr_currency_rates)
 
     current_country = "Kyrgyzstan"
     user_data[message.chat.id] = {"country": "Kyrgyzstan"}
@@ -540,5 +539,6 @@ def run_in_thread(target):
 if __name__ == "__main__":
     # Запуск длительных задач в отдельных потоках
     run_in_thread(set_bot_commands)
+
     # Основной поток выполняет бот
     bot.polling(none_stop=True)

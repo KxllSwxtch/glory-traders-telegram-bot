@@ -530,8 +530,6 @@ def calculate_cost(country, message):
         bot.delete_message(message.chat.id, processing_message.message_id)
         return
 
-    print_message(f"{car_date} {car_price} {car_engine_displacement}")
-
     # Если есть новая ссылка
     if car_price and car_date and car_engine_displacement:
         # Обработка расчёта для России
@@ -562,6 +560,7 @@ def calculate_cost(country, message):
             customs_fee = calculate_customs_fee(car_price_rub)
 
             # Таможенная пошлина
+            print(eur_rub_rate, car_price_rub)
             car_price_eur = car_price_rub / eur_rub_rate
             customs_duty = calculate_customs_duty(
                 car_price_eur,
