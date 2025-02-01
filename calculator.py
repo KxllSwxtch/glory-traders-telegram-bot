@@ -27,6 +27,8 @@ from utils import (
     calculate_recycling_fee,
     calculate_customs_duty,
     calculate_customs_fee_kg,
+    get_customs_fees_russia,
+    clean_number,
 )
 
 
@@ -549,32 +551,45 @@ def calculate_cost(country, message):
                 year = int(f"20{car_date[-2:]}")
                 month = int(car_date[2:4])
 
-            age_formatted = calculate_age(year, month)
+            age = calculate_age(year, month)
+            age_formatted = (
+                "до 3 лет"
+                if age == "0-3"
+                else (
+                    "от 3 до 5 лет"
+                    if age == "3-5"
+                    else "от 5 до 7 лет" if age == "5-7" else "от 7 лет"
+                )
+            )
+
             engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
 
             # Конвертируем стоимость авто в рубли
             price_krw = int(car_price) * 10000
             car_price_rub = price_krw * krw_rub_rate
 
-            # Рассчитываем мощность двигателя в л.с.
-            # horsepower = calculate_horse_power(car_engine_displacement)
+            response = get_customs_fees_russia(
+                car_engine_displacement, price_krw, year, month, engine_type=1
+            )
 
             # Таможенный сбор
-            customs_fee = calculate_customs_fee(car_price_rub)
+            customs_fee = clean_number(response["sbor"])
 
             # Таможенная пошлина
-            car_price_eur = car_price_rub / eur_rub_rate
-            customs_duty = calculate_customs_duty(
-                car_price_eur,
-                int(car_engine_displacement),
-                (eur_rub_rate + 3),
-                age_formatted,
-            )
+            # car_price_eur = car_price_rub / eur_rub_rate
+            # customs_duty = calculate_customs_duty(
+            #     car_price_eur,
+            #     int(car_engine_displacement),
+            #     (eur_rub_rate + 3),
+            #     age_formatted,
+            # )
+            customs_duty = clean_number(response["tax"])
 
             # Рассчитываем утилизационный сбор
-            recycling_fee = calculate_recycling_fee(
-                int(car_engine_displacement), age_formatted
-            )
+            # recycling_fee = calculate_recycling_fee(
+            #     int(car_engine_displacement), age_formatted
+            # )
+            recycling_fee = clean_number(response["util"])
 
             # customs_duty = calculate_customs_duty(car_engine_displacement, eur_rub_rate)
             excise_fee = calculate_excise_by_volume(
@@ -588,6 +603,7 @@ def calculate_cost(country, message):
                 + 120000
                 + customs_duty
                 + recycling_fee
+                + customs_fee
                 + 440000 * krw_rub_rate
                 + car_price_rub
             )
@@ -1100,17 +1116,16 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         print_message("Выполняется ручной расчёт стоимости для России")
 
         # Конвертируем стоимость авто в рубли
-        age_formatted = calculate_age(year, month)
+        # age_formatted = calculate_age(year, month)
         price_krw = int(price)
         car_price_rub = price_krw * krw_rub_rate
-        car_price_euro = car_price_rub / eur_rub_rate
-        # horsepower = calculate_horse_power(engine_volume)
-        customs_fee = calculate_customs_fee(car_price_rub)
-        recycling_fee = calculate_recycling_fee(int(engine_volume), age_formatted)
-        customs_duty = calculate_customs_duty(
-            car_price_euro, int(engine_volume), (eur_rub_rate + 3), age_formatted
+
+        response = get_customs_fees_russia(
+            engine_volume, price_krw, year, month, engine_type=1
         )
-        excise_fee = calculate_excise_by_volume(engine_volume=int(engine_volume))
+        customs_duty = clean_number(response["tax"])
+        customs_fee = clean_number(response["sbor"])
+        recycling_fee = clean_number(response["util"])
 
         total_cost = (
             (1000 * usd_rate)
@@ -1118,6 +1133,7 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
             + 120000
             + customs_duty
             + recycling_fee
+            + customs_fee
             + 440000 * krw_rub_rate
             + car_price_rub
         )
@@ -1132,6 +1148,7 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
             f"Расходы по РФ\n"
             f"- Услуги брокера\n- Выгрузка\n- СВХ (в порту)\n- Лаборатория\n- Получение ЭСБГТС и ЭПТС\n<b>Итого: от 80,000 ₽ до 120,000 ₽</b>\n\n"
             f"Таможенная ставка: <b>{format_number(customs_duty)} ₽</b>\n"
+            f"Таможенный сбор: <b>{format_number(customs_fee)} ₽</b>\n"
             f"Утильсбор: <b>{format_number(recycling_fee)} ₽</b>\n\n"
             f"Цены могут варьироваться в зависимости от курса, для более подробной информации пишите @GLORY_TRADERS"
         )
