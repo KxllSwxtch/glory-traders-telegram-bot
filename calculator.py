@@ -3,6 +3,7 @@ import psycopg2
 import os
 import re
 import requests
+from bs4 import BeautifulSoup  # убедитесь, что этот импорт есть вверху файла
 import datetime
 import logging
 import xml.etree.ElementTree as ET
@@ -85,17 +86,36 @@ def get_usdt_rub_rate():
 
 
 def get_usdt_krw_rate():
-    print("Получаем курс USDT -> KRW")
+    print("Получаем курс USDT -> KRW с Naver")
 
-    url = "https://api.coinbase.com/v2/exchange-rates?currency=USDT"
+    url = "https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=0&ie=utf8&query=Usdt"
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-        "Content-Type": "application/json",
+        "Content-Type": "text/html",
     }
 
     response = requests.get(url, headers=headers)
-    json_response = response.json()
-    return float(json_response.get("data", {}).get("rates", {}).get("KRW", "")) - 10
+    response.encoding = "utf-8"
+
+    if response.status_code != 200:
+        print("Ошибка при получении страницы Naver")
+        return 0.0
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    price_element = soup.find("strong", class_="price")
+
+    if price_element:
+        price_str = price_element.text.replace("원", "").replace(",", "").strip()
+        price_str = re.sub(r"[^\d.]", "", price_str)
+
+        try:
+            return float(price_str) - 7
+        except ValueError:
+            print("Ошибка при конвертации курса в число.")
+            return 0.0
+    else:
+        print("Курс USDT не найден на странице.")
+        return 0.0
 
 
 def get_usd_to_krw_rate():
