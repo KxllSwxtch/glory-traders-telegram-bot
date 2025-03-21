@@ -81,7 +81,7 @@ def get_usdt_rub_rate():
 
     response = requests.get(url, headers=headers)
     json_response = response.json()
-    return float(json_response.get("data", {}).get("rates", {}).get("RUB", "")) * 1.05
+    return float(json_response.get("data", {}).get("rates", {}).get("RUB", "")) * 1.10
 
 
 def get_usdt_krw_rate():
@@ -95,7 +95,7 @@ def get_usdt_krw_rate():
 
     response = requests.get(url, headers=headers)
     json_response = response.json()
-    return float(json_response.get("data", {}).get("rates", {}).get("KRW", "")) - 20
+    return float(json_response.get("data", {}).get("rates", {}).get("KRW", "")) - 10
 
 
 def get_usd_to_krw_rate():
