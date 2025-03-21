@@ -23,9 +23,6 @@ from utils import (
     format_number,
     print_message,
     calculate_age,
-    calculate_customs_fee,
-    calculate_recycling_fee,
-    calculate_customs_duty,
     calculate_customs_fee_kg,
     get_customs_fees_russia,
     clean_number,
@@ -58,6 +55,10 @@ krw_rate_kz = 0
 usd_rate_krg = 0
 krw_rate_krg = 0
 
+# Криптовалюта
+usdt_krw_rate = 0
+usdt_rub_rate = 0
+
 last_error_message_id = {}
 
 # Для России
@@ -67,6 +68,34 @@ eur_rub_rate = 0
 
 current_country = ""
 car_fuel_type = ""
+
+
+def get_usdt_rub_rate():
+    print("Получаем курс USDT -> RUB")
+
+    url = "https://api.coinbase.com/v2/exchange-rates?currency=USDT"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.get(url, headers=headers)
+    json_response = response.json()
+    return float(json_response.get("data", {}).get("rates", {}).get("RUB", "")) * 1.05
+
+
+def get_usdt_krw_rate():
+    print("Получаем курс USDT -> KRW")
+
+    url = "https://api.coinbase.com/v2/exchange-rates?currency=USDT"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.get(url, headers=headers)
+    json_response = response.json()
+    return float(json_response.get("data", {}).get("rates", {}).get("KRW", "")) - 20
 
 
 def get_usd_to_krw_rate():
@@ -92,9 +121,7 @@ def show_country_selection(chat_id):
     markup.add(btn_russia, btn_kazakhstan, btn_kyrgyzstan)
 
     # Отправка сообщения с меню выбора страны
-    bot.send_message(
-        chat_id, "Пожалуйста, выберите страну для расчёта:", reply_markup=markup
-    )
+    bot.send_message(chat_id, "Выберите страну для расчета", reply_markup=markup)
 
 
 # Курс валют для Кыргызстана
@@ -446,7 +473,11 @@ def get_car_info(url):
 
 
 def calculate_cost(country, message):
-    global car_data, car_id_external, util_fee, current_country, krw_rub_rate, eur_rub_rate, usd_rate_kz, usd_rate_krg, krw_rate_krg
+    global car_data, car_id_external, util_fee, current_country, krw_rub_rate, eur_rub_rate, usd_rate_kz, usd_rate_krg, krw_rate_krg, usdt_krw_rate, usdt_rub_rate
+
+    # Получаем курсы криптовалют
+    usdt_krw_rate = get_usdt_krw_rate()
+    usdt_rub_rate = get_usdt_rub_rate()
 
     print_message("ЗАПРОС НА РАСЧЁТ АВТОМОБИЛЯ")
 
@@ -478,42 +509,6 @@ def calculate_cost(country, message):
         query_params = parse_qs(parsed_url.query)
         car_id = query_params.get("carid", [None])[0]
 
-    # Проверяем наличие автомобиля в базе данных
-    # conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    # cursor = conn.cursor()
-
-    # cursor.execute(
-    #     "SELECT date, engine_volume, price, car_type FROM car_info WHERE car_id = %s",
-    #     (car_id,),
-    # )
-    # car_from_db = cursor.fetchone()
-    # car_title = ""
-
-    # if car_from_db:
-    #     # Автомобиль найден в БД, используем данные
-    #     date, engine_volume, price, car_type = car_from_db
-    #     car_date = date
-    #     car_engine_displacement = engine_volume
-    #     car_price = price
-    #     car_type = car_type
-    #     print_message(
-    #         f"Автомобиль найден в базе данных: ID: {car_id}\nRegistration Date: {date}\nCar Engine Displacement: {engine_volume}\n Car Price: {price} KRW"
-    #     )
-    # else:
-    #     print("Автомобиль не был найден в базе данных.")
-    #     # Автомобиля нет в базе, вызываем get_car_info
-    #     result = get_car_info(link)
-    #     car_date, car_price, car_engine_displacement, car_type = result
-
-    #     if result is None:
-    #         print(f"Ошибка при вызове get_car_info для ссылки: {link}")
-    #         send_error_message(
-    #             message,
-    #             "🚫 Произошла ошибка при получении данных. Проверьте ссылку и попробуйте снова.",
-    #         )
-    #         # bot.delete_message(message.chat.id, processing_message.message_id)
-    #         return
-
     result = get_car_info(link)
     car_date, car_price, car_engine_displacement, car_type = result
 
@@ -531,10 +526,6 @@ def calculate_cost(country, message):
                 callback_data="calculate_another",
             )
         )
-        bot.send_message(
-            message.chat.id, car_title, parse_mode="HTML", reply_markup=keyboard
-        )
-        bot.delete_message(message.chat.id, processing_message.message_id)
         return
 
     # Если есть новая ссылка
@@ -572,29 +563,9 @@ def calculate_cost(country, message):
                 car_engine_displacement, price_krw, year, month, engine_type=1
             )
 
-            # Таможенный сбор
             customs_fee = clean_number(response["sbor"])
-
-            # Таможенная пошлина
-            # car_price_eur = car_price_rub / eur_rub_rate
-            # customs_duty = calculate_customs_duty(
-            #     car_price_eur,
-            #     int(car_engine_displacement),
-            #     (eur_rub_rate + 3),
-            #     age_formatted,
-            # )
             customs_duty = clean_number(response["tax"])
-
-            # Рассчитываем утилизационный сбор
-            # recycling_fee = calculate_recycling_fee(
-            #     int(car_engine_displacement), age_formatted
-            # )
             recycling_fee = clean_number(response["util"])
-
-            # customs_duty = calculate_customs_duty(car_engine_displacement, eur_rub_rate)
-            excise_fee = calculate_excise_by_volume(
-                engine_volume=int(car_engine_displacement)
-            )
 
             # Расчет итоговой стоимости автомобиля
             total_cost = (
@@ -608,21 +579,35 @@ def calculate_cost(country, message):
                 + car_price_rub
             )
 
+            total_cost_usdt = (
+                (1000)
+                + (250)
+                + (120000 / usdt_rub_rate)
+                + (customs_duty / usdt_rub_rate)
+                + (recycling_fee / usdt_rub_rate)
+                + (customs_fee / usdt_rub_rate)
+                + (440000 / usdt_krw_rate)
+                + (car_price_rub / usdt_rub_rate)
+            )
+
             car_data["price_rub"] = car_price_rub
             car_data["duty"] = customs_fee
             car_data["recycling_fee"] = recycling_fee
             car_data["total_price"] = total_cost
             car_data["customs_duty_fee"] = customs_duty
-            car_data["excise"] = excise_fee
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
 
             # Формирование сообщения результата
             result_message = (
                 f"Возраст: {age_formatted}\n"
-                f"Стоимость автомобиля в Корее: {format_number(price_krw)} ₩\n"
+                f"Стоимость автомобиля в Корее: ₩{format_number(price_krw)}\n"
                 f"Объём двигателя: {engine_volume_formatted}\n\n"
-                f"Примерная стоимость автомобиля под ключ до Владивостока: \n<b>{format_number(total_cost)} ₽</b>\n\n"
+                f"Курсы криптовалют:\n"
+                f"USDT ➡️ KRW: <b>₩{format_number(usdt_krw_rate)}</b>\n"
+                f"USDT ➡️ RUB: <b>{format_number(usdt_rub_rate)} ₽</b>\n\n"
+                f"Примерная стоимость автомобиля под ключ до Владивостока:\n<b>{format_number(total_cost)} ₽</b>\n"
+                f"Примерная стоимость автомобиля под ключ до Владивостока (USDT):\n<b>${format_number(total_cost_usdt)}</b>\n\n"
                 f"🔗 <a href='{preview_link}'>Ссылка на автомобиль</a>\n\n"
                 "Если данное авто попадает под санкции, пожалуйста уточните возможность отправки в вашу страну у менеджера @GLORY_TRADERS\n\n"
                 "🔗 <a href='https://t.me/GLORYTRADERS'>Официальный телеграм канал</a>\n"

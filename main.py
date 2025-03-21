@@ -183,6 +183,7 @@ def process_encar_link(message):
         bot.send_message(
             message.chat.id,
             "Пожалуйста, выберите страну из меню перед отправкой ссылки на автомобиль.",
+            reply_markup=show_country_selection(message.chat.id),
         )
         return
 
