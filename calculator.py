@@ -100,7 +100,7 @@ def get_usdt_rub_rate():
         data = response.json()
         
         if 'buy' in data:
-            return float(data['buy'])
+            return float(data['buy']) + 1.5
         else:
             print("Не удалось получить курс покупки USDT из ответа API")
             return 0.0
@@ -676,7 +676,7 @@ def calculate_cost(country, message, entity_type="physical"):
             total_customs_fees = customs_duty + recycling_fee + customs_fee + vat_amount
             
             # Услуги брокера
-            broker_services = 80000
+            broker_services = 90000
 
             # Расчет итоговой стоимости автомобиля
             total_cost = total_korea_rub + total_customs_fees + broker_services
@@ -1302,7 +1302,7 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type, 
         total_customs_fees = customs_duty + recycling_fee + customs_fee + vat_amount
         
         # Услуги брокера
-        broker_services = 80000
+        broker_services = 90000
 
         # Расчет итоговой стоимости автомобиля
         total_cost = total_korea_rub + total_customs_fees + broker_services
