@@ -555,6 +555,9 @@ def calculate_cost(country, message):
     # Импортируем user_data для получения типа плательщика
     from main import user_data
     
+    # Debug: проверяем содержимое user_data
+    print(f"[DEBUG] Full user_data for user {message.chat.id}: {user_data.get(message.chat.id, 'NOT_FOUND')}")
+    
     # Получаем тип плательщика (по умолчанию физическое лицо)
     entity_type = user_data.get(message.chat.id, {}).get("entity_type", "physical")
     print(f"[DEBUG] Entity type for user {message.chat.id}: {entity_type}")
@@ -1268,10 +1271,15 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type, 
     # Импортируем user_data для получения типа плательщика
     from main import user_data
     
+    # Debug: проверяем содержимое user_data
+    if message:
+        print(f"[DEBUG] calculate_cost_manual - Full user_data for user {message.chat.id}: {user_data.get(message.chat.id, 'NOT_FOUND')}")
+    
     # Получаем тип плательщика (по умолчанию физическое лицо)
     entity_type = "physical"
     if message and message.chat.id in user_data:
         entity_type = user_data[message.chat.id].get("entity_type", "physical")
+        print(f"[DEBUG] calculate_cost_manual - Entity type for user {message.chat.id}: {entity_type}")
 
     if country == "Russia":
         print_message("Выполняется ручной расчёт стоимости для России")
