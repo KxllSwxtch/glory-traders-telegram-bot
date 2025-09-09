@@ -33,7 +33,7 @@ from utils import (
 load_dotenv()
 
 CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH_LOCAL")
-DATABASE_URL = "postgres://uea5qru3fhjlj:p44343a46d4f1882a5ba2413935c9b9f0c284e6e759a34cf9569444d16832d4fe@c97r84s7psuajm.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/d9pr93olpfl9bj"
+DATABASE_URL = "postgres://ud5v8u038bcsqc:p9ad496822274f376009067f9578c5acae5baf03a2a67c5fc69cf36982fc8bd3c@c9srcab37moub2.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/dantc57en2dif2"
 
 proxy = {
     "http": "http://B01vby:GBno0x@45.118.250.2:8000",
@@ -74,47 +74,104 @@ car_fuel_type = ""
 def get_usdt_rub_rate():
     print("Получаем курс USDT -> RUB")
 
-    url = "https://api.coinbase.com/v2/exchange-rates?currency=USDT"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-        "Content-Type": "application/json",
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'accept-language': 'en,ru;q=0.9,en-CA;q=0.8,la;q=0.7,fr;q=0.6,ko;q=0.5',
+        'cache-control': 'max-age=0',
+        'priority': 'u=0, i',
+        'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
     }
 
-    response = requests.get(url, headers=headers)
-    json_response = response.json()
-    return float(json_response.get("data", {}).get("rates", {}).get("RUB", "")) * 1.10
+    try:
+        response = requests.get('https://moscaex.online/api2/usdt_rate', headers=headers)
+        
+        if response.status_code != 200:
+            print("Ошибка при получении данных от moscaex.online API")
+            return 0.0
+            
+        data = response.json()
+        
+        if 'buy' in data:
+            return float(data['buy'])
+        else:
+            print("Не удалось получить курс покупки USDT из ответа API")
+            return 0.0
+            
+    except requests.RequestException as e:
+        print(f"Ошибка при запросе к moscaex.online API: {e}")
+        return 0.0
+    except (ValueError, KeyError) as e:
+        print(f"Ошибка при обработке ответа API: {e}")
+        return 0.0
 
 
 def get_usdt_krw_rate():
-    print("Получаем курс USDT -> KRW с Naver")
+    print("Получаем курс USDT -> KRW с Naver API")
 
-    url = "https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=0&ie=utf8&query=Usdt"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-        "Content-Type": "text/html",
+    cookies = {
+        'NAC': 'oykKBwQUeQVvA',
+        '_naver_usersession_': 'h0DyHFIrtgiQcZ87aGrARg==',
+        'NNB': 'XVF5GALFMO7WQ',
+        'SRT30': '1757373285',
+        'SRT5': '1757373285',
+        'page_uid': 'j79CdsqosTCssl9UUs4ssssss/d-002127',
+        'BUC': '-01DtAJA2gA2TCIezRuhI-EE5e9v8Paa1zriIie7Ftc=',
     }
 
-    response = requests.get(url, headers=headers)
-    response.encoding = "utf-8"
+    headers = {
+        'accept': 'application/json, text/plain, */*',
+        'accept-language': 'en,ru;q=0.9,en-CA;q=0.8,la;q=0.7,fr;q=0.6,ko;q=0.5',
+        'content-type': 'application/json',
+        'origin': 'https://m.stock.naver.com',
+        'priority': 'u=1, i',
+        'referer': 'https://m.stock.naver.com/crypto/UPBIT/USDT',
+        'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+    }
 
-    if response.status_code != 200:
-        print("Ошибка при получении страницы Naver")
-        return 0.0
+    json_data = {
+        'fqnfTickers': [
+            'USDT_KRW_UPBIT',
+            'USDT_KRW_BITHUMB',
+        ],
+    }
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    price_element = soup.find("strong", class_="price")
-
-    if price_element:
-        price_str = price_element.text.replace("원", "").replace(",", "").strip()
-        price_str = re.sub(r"[^\d.]", "", price_str)
-
-        try:
-            return float(price_str) - 7
-        except ValueError:
-            print("Ошибка при конвертации курса в число.")
+    try:
+        response = requests.post('https://m.stock.naver.com/front-api/realTime/crypto', 
+                                cookies=cookies, headers=headers, json=json_data)
+        
+        if response.status_code != 200:
+            print("Ошибка при получении данных от Naver API")
             return 0.0
-    else:
-        print("Курс USDT не найден на странице.")
+            
+        data = response.json()
+        
+        if data.get('isSuccess') and 'result' in data and 'USDT_KRW_UPBIT' in data['result']:
+            trade_price = data['result']['USDT_KRW_UPBIT']['tradePrice']
+            # Вычитаем 8 пунктов согласно требованию
+            return float(trade_price) - 8
+        else:
+            print("Не удалось получить курс USDT из ответа API")
+            return 0.0
+            
+    except requests.RequestException as e:
+        print(f"Ошибка при запросе к Naver API: {e}")
+        return 0.0
+    except (ValueError, KeyError) as e:
+        print(f"Ошибка при обработке ответа API: {e}")
         return 0.0
 
 
@@ -130,91 +187,91 @@ def get_usd_to_krw_rate():
         raise Exception("Не удалось получить курс валют.")
 
 
-# Функция для отправки меню выбора страны
-def show_country_selection(chat_id):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_russia = types.KeyboardButton("🇷🇺 Россия")
-    btn_kazakhstan = types.KeyboardButton("🇰🇿 Казахстан")
-    btn_kyrgyzstan = types.KeyboardButton("🇰🇬 Кыргызстан")
+# # Функция для отправки меню выбора страны (ЗАКОММЕНТИРОВАНО)
+# def show_country_selection(chat_id):
+#     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+#     btn_russia = types.KeyboardButton("🇷🇺 Россия")
+#     btn_kazakhstan = types.KeyboardButton("🇰🇿 Казахстан")
+#     btn_kyrgyzstan = types.KeyboardButton("🇰🇬 Кыргызстан")
 
-    # Добавление кнопок в меню
-    markup.add(btn_russia, btn_kazakhstan, btn_kyrgyzstan)
+#     # Добавление кнопок в меню
+#     markup.add(btn_russia, btn_kazakhstan, btn_kyrgyzstan)
 
-    # Отправка сообщения с меню выбора страны
-    bot.send_message(chat_id, "Выберите страну для расчета", reply_markup=markup)
+#     # Отправка сообщения с меню выбора страны
+#     bot.send_message(chat_id, "Выберите страну для расчета", reply_markup=markup)
 
 
-# Курс валют для Кыргызстана
-def get_nbkr_currency_rates():
-    global usd_rate_krg, krw_rate_krg
+# # Курс валют для Кыргызстана (ЗАКОММЕНТИРОВАНО)
+# def get_nbkr_currency_rates():
+#     global usd_rate_krg, krw_rate_krg
 
-    clear_memory()
+#     clear_memory()
 
-    print_message("[КУРС] КЫРГЫЗСТАН")
+#     print_message("[КУРС] КЫРГЫЗСТАН")
 
-    url = "https://www.nbkr.kg/XML/daily.xml"
-    weekly_url = "https://www.nbkr.kg/XML/weekly.xml"
+#     url = "https://www.nbkr.kg/XML/daily.xml"
+#     weekly_url = "https://www.nbkr.kg/XML/weekly.xml"
 
-    try:
-        # Запрос к API НБКР
-        response = requests.get(url)
-        response.raise_for_status()
+#     try:
+#         # Запрос к API НБКР
+#         response = requests.get(url)
+#         response.raise_for_status()
 
-        # Парсинг XML-ответа
-        root = ET.fromstring(response.content)
+#         # Парсинг XML-ответа
+#         root = ET.fromstring(response.content)
 
-        # Словарь для хранения курсов валют
-        currency_rates = {}
+#         # Словарь для хранения курсов валют
+#         currency_rates = {}
 
-        # Валюты, которые нам нужны
-        target_currencies = {"USD", "EUR", "RUB", "CNY"}
+#         # Валюты, которые нам нужны
+#         target_currencies = {"USD", "EUR", "RUB", "CNY"}
 
-        # Дата курса
-        rates_date = root.get("Date")
+#         # Дата курса
+#         rates_date = root.get("Date")
 
-        for item in root.findall("./Currency"):
-            code = item.get("ISOCode")
-            rate_element = item.find("Value")
+#         for item in root.findall("./Currency"):
+#             code = item.get("ISOCode")
+#             rate_element = item.find("Value")
 
-            if code in target_currencies and rate_element is not None:
-                rate = float(rate_element.text.replace(",", "."))
-                currency_rates[code] = rate
+#             if code in target_currencies and rate_element is not None:
+#                 rate = float(rate_element.text.replace(",", "."))
+#                 currency_rates[code] = rate
 
-        usd_rate_krg = currency_rates["USD"]
+#         usd_rate_krg = currency_rates["USD"]
 
-        try:
-            response_weekly = requests.get(weekly_url)
-            response_weekly.raise_for_status()
+#         try:
+#             response_weekly = requests.get(weekly_url)
+#             response_weekly.raise_for_status()
 
-            root = ET.fromstring(response_weekly.content)
+#             root = ET.fromstring(response_weekly.content)
 
-            for item in root.findall("./Currency"):
-                # Получаем ISOCode из атрибута Currency
-                code = item.get("ISOCode")
-                rate_element = item.find("Value")
+#             for item in root.findall("./Currency"):
+#                 # Получаем ISOCode из атрибута Currency
+#                 code = item.get("ISOCode")
+#                 rate_element = item.find("Value")
 
-                if code == "KRW":
-                    krw_rate_krg = float(rate_element.text.replace(",", "."))
-                    break
-        except:
-            print("Error...")
+#                 if code == "KRW":
+#                     krw_rate_krg = float(rate_element.text.replace(",", "."))
+#                     break
+#         except:
+#             print("Error...")
 
-        rates_text = (
-            f"Курс Валют Национального Банка Республики Кыргызстан ({rates_date}):\n\n"
-            f"EUR: {currency_rates['EUR']:.2f} KGS\n"
-            f"USD: {currency_rates['USD']:.2f} KGS\n"
-            f"RUB: {currency_rates['RUB']:.2f} KGS\n"
-            f"CNY: {currency_rates['CNY']:.2f} KGS\n"
-        )
+#         rates_text = (
+#             f"Курс Валют Национального Банка Республики Кыргызстан ({rates_date}):\n\n"
+#             f"EUR: {currency_rates['EUR']:.2f} KGS\n"
+#             f"USD: {currency_rates['USD']:.2f} KGS\n"
+#             f"RUB: {currency_rates['RUB']:.2f} KGS\n"
+#             f"CNY: {currency_rates['CNY']:.2f} KGS\n"
+#         )
 
-        return rates_text
+#         return rates_text
 
-    except requests.RequestException as e:
-        print(f"Ошибка при подключении к НБКР API: {e}")
-        return None
-    except ET.ParseError as e:
-        print(f"Ошибка при разборе XML: {e}")
-        return None
+#     except requests.RequestException as e:
+#         print(f"Ошибка при подключении к НБКР API: {e}")
+#         return None
+#     except ET.ParseError as e:
+#         print(f"Ошибка при разборе XML: {e}")
+#         return None
 
 
 # Курс валют для Казахстана
@@ -575,10 +632,18 @@ def calculate_cost(country, message):
 
             engine_volume_formatted = f"{format_number(car_engine_displacement)} cc"
 
-            # Конвертируем стоимость авто в рубли
+            # Расчет стоимости по новой схеме
             price_krw = int(car_price) * 10000
-            car_price_rub = price_krw * krw_rub_rate
+            korea_costs_krw = 1900000  # Фиксированные расходы в Корее
+            
+            # Общие расходы в Корее в KRW
+            total_korea_krw = price_krw + korea_costs_krw
+            
+            # Конвертация KRW → USDT → RUB
+            total_korea_usdt = total_korea_krw / usdt_krw_rate
+            total_korea_rub = total_korea_usdt * usdt_rub_rate
 
+            # Получаем таможенные сборы через API
             response = get_customs_fees_russia(
                 car_engine_displacement, price_krw, year, month, engine_type=1
             )
@@ -586,48 +651,55 @@ def calculate_cost(country, message):
             customs_fee = clean_number(response["sbor"])
             customs_duty = clean_number(response["tax"])
             recycling_fee = clean_number(response["util"])
+            
+            # Общие таможенные расходы
+            total_customs_fees = customs_duty + recycling_fee + customs_fee
+            
+            # Услуги брокера
+            broker_services = 80000
 
             # Расчет итоговой стоимости автомобиля
-            total_cost = (
-                (1000 * usd_rate)
-                + (250 * usd_rate)
-                + 120000
-                + customs_duty
-                + recycling_fee
-                + customs_fee
-                + 440000 * krw_rub_rate
-                + car_price_rub
-            )
+            total_cost = total_korea_rub + total_customs_fees + broker_services
 
-            total_cost_usdt = (
-                (1000)
-                + (250)
-                + (120000 / usdt_rub_rate)
-                + (customs_duty / usdt_rub_rate)
-                + (recycling_fee / usdt_rub_rate)
-                + (customs_fee / usdt_rub_rate)
-                + (440000 / usdt_krw_rate)
-                + (car_price_rub / usdt_rub_rate)
-            )
+            # USDT версия для справки
+            total_cost_usdt = (total_korea_usdt + 
+                             (total_customs_fees / usdt_rub_rate) + 
+                             (broker_services / usdt_rub_rate))
 
-            car_data["price_rub"] = car_price_rub
-            car_data["duty"] = customs_fee
+            car_data["price_krw"] = price_krw
+            car_data["korea_costs_krw"] = korea_costs_krw
+            car_data["total_korea_rub"] = total_korea_rub
+            car_data["total_korea_usdt"] = total_korea_usdt
+            car_data["customs_fee"] = customs_fee
+            car_data["customs_duty"] = customs_duty
             car_data["recycling_fee"] = recycling_fee
+            car_data["total_customs_fees"] = total_customs_fees
+            car_data["broker_services"] = broker_services
             car_data["total_price"] = total_cost
-            car_data["customs_duty_fee"] = customs_duty
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
 
             # Формирование сообщения результата
             result_message = (
+                f"📋 <b>Информация об автомобиле:</b>\n"
                 f"Возраст: {age_formatted}\n"
-                f"Стоимость автомобиля в Корее: ₩{format_number(price_krw)}\n"
                 f"Объём двигателя: {engine_volume_formatted}\n\n"
-                f"Курсы криптовалют:\n"
+                
+                f"💰 <b>Текущие курсы валют:</b>\n"
                 f"USDT ➡️ KRW: <b>₩{format_number(usdt_krw_rate)}</b>\n"
-                f"USDT ➡️ RUB: <b>{format_number(usdt_rub_rate)} ₽</b>\n\n"
-                f"Примерная стоимость автомобиля под ключ до Владивостока:\n<b>{format_number(total_cost)} ₽</b>\n"
-                f"Примерная стоимость автомобиля под ключ до Владивостока (USDT):\n<b>${format_number(total_cost_usdt)}</b>\n\n"
+                f"USDT ➡️ RUB: <b>{usdt_rub_rate:.2f} ₽</b>\n\n"
+                
+                f"🔹 <b>Стоимость автомобиля в Корее:</b>\n₩{format_number(price_krw)}\n"
+                f"🔹 <b>Расходы до Владивостока:</b>\n₩{format_number(korea_costs_krw)}\n"
+                f"🔹 <b>Общие расходы в Корее в рублях:</b>\n{format_number(total_korea_rub)} ₽\n"
+                f"🔹 <b>Таможенные платежи:</b>\n{format_number(total_customs_fees)} ₽\n"
+                f"🔹 <b>Услуги брокера (<i>(СВХ, Выгрузка, Лаборатория, СБКТС и ЭПТС)</i>):</b>\n{format_number(broker_services)} ₽\n"
+                
+                f"🔷 <b>Итого общая стоимость под ключ во Владивостоке:</b>\n"
+                f"<b>{format_number(total_cost)} ₽</b>\n\n"
+                
+                f"<i>Доставка по городам РФ: от 180,000 до 220,000 ₽</i>\n\n"
+                
                 f"🔗 <a href='{preview_link}'>Ссылка на автомобиль</a>\n\n"
                 "Если данное авто попадает под санкции, пожалуйста уточните возможность отправки в вашу страну у менеджера @GLORY_TRADERS\n\n"
                 "🔗 <a href='https://t.me/GLORYTRADERS'>Официальный телеграм канал</a>\n"
@@ -635,11 +707,11 @@ def calculate_cost(country, message):
 
             # Клавиатура с дальнейшими действиями
             keyboard = types.InlineKeyboardMarkup()
-            keyboard.add(
-                types.InlineKeyboardButton(
-                    "📊 Детализация расчёта", callback_data="detail"
-                )
-            )
+            # keyboard.add(
+            #     types.InlineKeyboardButton(
+            #         "📊 Детализация расчёта", callback_data="detail"
+            #     )
+            # )
             keyboard.add(
                 types.InlineKeyboardButton(
                     "📝 Технический отчёт об автомобиле",
@@ -784,11 +856,11 @@ def calculate_cost(country, message):
 
             # Клавиатура с дальнейшими действиями
             keyboard = types.InlineKeyboardMarkup()
-            keyboard.add(
-                types.InlineKeyboardButton(
-                    "📊 Детализация расчёта", callback_data="detail"
-                )
-            )
+            # keyboard.add(
+            #     types.InlineKeyboardButton(
+            #         "📊 Детализация расчёта", callback_data="detail"
+            #     )
+            # )
             keyboard.add(
                 types.InlineKeyboardButton(
                     "📝 Технический отчёт об автомобиле",
@@ -888,11 +960,11 @@ def calculate_cost(country, message):
 
             # Клавиатура с дальнейшими действиями
             keyboard = types.InlineKeyboardMarkup()
-            keyboard.add(
-                types.InlineKeyboardButton(
-                    "📊 Детализация расчёта", callback_data="detail"
-                )
-            )
+            # keyboard.add(
+            #     types.InlineKeyboardButton(
+            #         "📊 Детализация расчёта", callback_data="detail"
+            #     )
+            # )
             keyboard.add(
                 types.InlineKeyboardButton(
                     "📝 Технический отчёт об автомобиле",
@@ -974,16 +1046,21 @@ def handle_callback_query(call):
 
             # Construct cost breakdown message
             detail_message = (
-                "📝 Детализация расчёта:\n\n"
-                f"Стомость автомобиля: {format_number(car_data['price_rub'])} ₽\n\n"
-                f"Таможенный cбор: {format_number(car_data['duty'])} ₽\n\n"
-                f"Таможенная пошлина: {format_number(car_data['customs_duty_fee'])} ₽\n\n"
-                f"Утилизационный сбор: {format_number(car_data['recycling_fee'])} ₽\n\n"
-                # f"Акциза: {format_number(car_data['excise'])} ₽\n\n"
-                f"Логистика до Владивостока: 110,000 ₽\n\n"
-                f"Услуги брокера: 120,000 ₽\n\n"
-                f"<b>Итоговая стоимость автомобиля: {format_number(car_data['total_price'])} ₽</b>\n\n"
-                f"<b>ПРИМЕЧАНИЕ: ЦЕНА НА АВТОМОБИЛЬ ЗАВИСИТ ОТ ТЕКУЩЕГО КУРСА, ДЛЯ БОЛЕЕ ТОЧНОЙ ИНФОРМАЦИИ НАПИШИТЕ НАШЕМУ МЕНЕДЖЕРУ @GLORY_TRADERS</b>"
+                "📝 <b>Детализация расчёта:</b>\n\n"
+                f"🔹 <b>Стоимость автомобиля в Корее:</b> ₩{format_number(car_data['price_krw'])}\n"
+                f"🔹 <b>Расходы до Владивостока:</b> ₩{format_number(car_data['korea_costs_krw'])}\n"
+                f"🔹 <b>Общие расходы в Корее:</b> {format_number(car_data['total_korea_rub'])} ₽\n"
+                f"   <i>(Конвертация через USDT: ${format_number(car_data['total_korea_usdt'])})</i>\n\n"
+                f"🔹 <b>Таможенные сборы всего:</b> {format_number(car_data['total_customs_fees'])} ₽\n"
+                f"   • Таможенная пошлина: {format_number(car_data['customs_duty'])} ₽\n"
+                f"   • Таможенный сбор: {format_number(car_data['customs_fee'])} ₽\n"
+                f"   • Утилизационный сбор: {format_number(car_data['recycling_fee'])} ₽\n\n"
+                f"🔹 <b>Услуги брокера:</b> {format_number(car_data['broker_services'])} ₽\n"
+                f"   <i>(СВХ, Выгрузка, Лаборатория, СБКТС и ЭПТС)</i>\n\n"
+                f"🔷 <b>Итоговая стоимость под ключ во Владивостоке:</b>\n"
+                f"<b>{format_number(car_data['total_price'])} ₽</b>\n\n"
+                f"<i>Доставка по городам РФ: от 180,000 до 220,000 ₽</i>\n\n"
+                f"<b>ПРИМЕЧАНИЕ: ЦЕНА ЗАВИСИТ ОТ ТЕКУЩЕГО КУРСА, ДЛЯ БОЛЕЕ ТОЧНОЙ ИНФОРМАЦИИ НАПИШИТЕ @GLORY_TRADERS</b>"
             )
 
         if current_country == "Kazakhstan":
@@ -1110,7 +1187,9 @@ def handle_callback_query(call):
             )
 
     elif call.data == "calculate_another":
-        show_country_selection(call.message.chat.id)
+        # Теперь используем прямой вызов функции из main.py
+        from main import show_calculation_options
+        show_calculation_options(call.message.chat.id)
 
 
 # Расчёты для ручного ввода
@@ -1120,41 +1199,59 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
     if country == "Russia":
         print_message("Выполняется ручной расчёт стоимости для России")
 
-        # Конвертируем стоимость авто в рубли
-        # age_formatted = calculate_age(year, month)
-        price_krw = int(price)
-        car_price_rub = price_krw * krw_rub_rate
+        # Получаем криптовалютные курсы
+        usdt_krw_rate = get_usdt_krw_rate()
+        usdt_rub_rate = get_usdt_rub_rate()
 
+        # Расчет стоимости по новой схеме
+        price_krw = int(price)
+        korea_costs_krw = 1900000  # Фиксированные расходы в Корее
+        
+        # Общие расходы в Корее в KRW
+        total_korea_krw = price_krw + korea_costs_krw
+        
+        # Конвертация KRW → USDT → RUB
+        total_korea_usdt = total_korea_krw / usdt_krw_rate
+        total_korea_rub = total_korea_usdt * usdt_rub_rate
+
+        # Получаем таможенные сборы через API
         response = get_customs_fees_russia(
             engine_volume, price_krw, year, month, engine_type=1
         )
         customs_duty = clean_number(response["tax"])
         customs_fee = clean_number(response["sbor"])
         recycling_fee = clean_number(response["util"])
+        
+        # Общие таможенные расходы
+        total_customs_fees = customs_duty + recycling_fee + customs_fee
+        
+        # Услуги брокера
+        broker_services = 80000
 
-        total_cost = (
-            (1000 * usd_rate)
-            + (250 * usd_rate)
-            + 120000
-            + customs_duty
-            + recycling_fee
-            + customs_fee
-            + 440000 * krw_rub_rate
-            + car_price_rub
-        )
+        # Расчет итоговой стоимости автомобиля
+        total_cost = total_korea_rub + total_customs_fees + broker_services
 
         result_message = (
-            f"Расчёты для автомобиля:\n\n"
-            f"Дата: <i>{str(year)}/{str(month)}</i>\nОбъём: <b>{format_number(engine_volume)} cc</b>\nЦена в Корее: <b>{format_number(price)} ₩</b>\n"
-            f"Под ключ до Владивостока: <b>{format_number(total_cost)}</b> ₽\n\n\n"
-            f"Логистика c Кореи до Владивостока\n"
-            f"- 1000$ (может меняться)\n"
-            f"- Комиссия компании: 250$\n\n"
-            f"Расходы по РФ\n"
-            f"- Услуги брокера\n- Выгрузка\n- СВХ (в порту)\n- Лаборатория\n- Получение ЭСБГТС и ЭПТС\n<b>Итого: от 80,000 ₽ до 120,000 ₽</b>\n\n"
-            f"Таможенная ставка: <b>{format_number(customs_duty)} ₽</b>\n"
-            f"Таможенный сбор: <b>{format_number(customs_fee)} ₽</b>\n"
-            f"Утильсбор: <b>{format_number(recycling_fee)} ₽</b>\n\n"
+            f"📋 <b>Расчёт для автомобиля:</b>\n\n"
+            f"Дата: <i>{str(year)}/{str(month)}</i>\n"
+            f"Объём: <b>{format_number(engine_volume)} cc</b>\n\n"
+            
+            f"💰 <b>Текущие курсы криптовалют:</b>\n"
+            f"USDT ➡️ KRW: <b>₩{format_number(usdt_krw_rate)}</b>\n"
+            f"USDT ➡️ RUB: <b>{usdt_rub_rate:.2f} ₽</b>\n\n"
+            
+            f"🔹 <b>Стоимость автомобиля в Корее:</b> ₩{format_number(price_krw)}\n"
+            f"🔹 <b>Расходы до Владивостока:</b> ₩{format_number(korea_costs_krw)}\n"
+            f"🔹 <b>Общие расходы в Корее в рублях:</b> {format_number(total_korea_rub)} ₽\n"
+            f"   <i>(Конвертация: KRW → USDT → RUB)</i>\n"
+            f"🔹 <b>Таможенные сборы:</b> {format_number(total_customs_fees)} ₽\n"
+            f"   <i>(Пошлина + сбор + утильсбор)</i>\n"
+            f"🔹 <b>Услуги брокера:</b> {format_number(broker_services)} ₽\n"
+            f"   <i>(СВХ, Выгрузка, Лаборатория, СБКТС и ЭПТС)</i>\n\n"
+            
+            f"🔷 <b>Итого под ключ до Владивостока:</b> <b>{format_number(total_cost)} ₽</b>\n\n"
+            
+            f"<i>Доставка по городам РФ: от 180,000 до 220,000 ₽</i>\n\n"
             f"Цены могут варьироваться в зависимости от курса, для более подробной информации пишите @GLORY_TRADERS"
         )
 

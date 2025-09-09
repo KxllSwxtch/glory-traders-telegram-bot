@@ -5,9 +5,9 @@ from telebot import types
 from calculator import (
     calculate_cost,
     get_currency_rates,
-    show_country_selection,
-    get_nbk_currency_rates,
-    get_nbkr_currency_rates,
+    # show_country_selection,  # Закомментировано - больше не используется
+    # get_nbk_currency_rates,  # Закомментировано - больше не используется  
+    # get_nbkr_currency_rates, # Закомментировано - больше не используется
     calculate_cost_manual,
 )
 from config import bot
@@ -30,12 +30,12 @@ def handle_callback_query(call):
     user_id = call.message.chat.id
 
     if call.data == "calculate_another":
-        # Сбрасываем данные пользователя
-        user_data[user_id] = {}
-        current_country = None
+        # Сбрасываем данные пользователя и устанавливаем Россию по умолчанию
+        user_data[user_id] = {"country": "Russia"}
+        current_country = "Russia"
         current_car_type = None
 
-        show_country_selection(user_id)
+        show_calculation_options(user_id)
     elif call.data in ["sedan", "crossover"]:
         handle_car_type_selection(call)
 
@@ -48,54 +48,54 @@ def set_bot_commands():
     commands = [
         types.BotCommand("start", "Запустить бота"),
         types.BotCommand("cbr", "Курс ЦБ Российской Федерации"),
-        types.BotCommand("nbk", "Курс Национального Банка Республики Казахстан"),
-        types.BotCommand("nbkr", "Курс Национального Банка Республики Кыргызстан"),
+        # types.BotCommand("nbk", "Курс Национального Банка Республики Казахстан"),
+        # types.BotCommand("nbkr", "Курс Национального Банка Республики Кыргызстан"),
     ]
     bot.set_my_commands(commands)
 
 
-@bot.message_handler(commands=["nbkr"])
-def nbkr_command(message):
-    try:
-        rates_text = get_nbkr_currency_rates()
+# @bot.message_handler(commands=["nbkr"])
+# def nbkr_command(message):
+#     try:
+#         rates_text = get_nbkr_currency_rates()
 
-        # Создаем клавиатуру с кнопкой для расчета автомобиля
-        keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(
-            types.InlineKeyboardButton(
-                "🔍 Рассчитать стоимость автомобиля", callback_data="calculate_another"
-            )
-        )
+#         # Создаем клавиатуру с кнопкой для расчета автомобиля
+#         keyboard = types.InlineKeyboardMarkup()
+#         keyboard.add(
+#             types.InlineKeyboardButton(
+#                 "🔍 Рассчитать стоимость автомобиля", callback_data="calculate_another"
+#             )
+#         )
 
-        # Отправляем сообщение с курсами и клавиатурой
-        bot.send_message(message.chat.id, rates_text, reply_markup=keyboard)
-    except Exception as e:
-        bot.send_message(
-            message.chat.id, "Не удалось получить курсы валют. Попробуйте позже."
-        )
-        print(f"Ошибка при получении курсов валют: {e}")
+#         # Отправляем сообщение с курсами и клавиатурой
+#         bot.send_message(message.chat.id, rates_text, reply_markup=keyboard)
+#     except Exception as e:
+#         bot.send_message(
+#             message.chat.id, "Не удалось получить курсы валют. Попробуйте позже."
+#         )
+#         print(f"Ошибка при получении курсов валют: {e}")
 
 
-@bot.message_handler(commands=["nbk"])
-def nbk_command(message):
-    try:
-        rates_text = get_nbk_currency_rates()
+# @bot.message_handler(commands=["nbk"])
+# def nbk_command(message):
+#     try:
+#         rates_text = get_nbk_currency_rates()
 
-        # Создаем клавиатуру с кнопкой для расчета автомобиля
-        keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(
-            types.InlineKeyboardButton(
-                "🔍 Рассчитать стоимость автомобиля", callback_data="calculate_another"
-            )
-        )
+#         # Создаем клавиатуру с кнопкой для расчета автомобиля
+#         keyboard = types.InlineKeyboardMarkup()
+#         keyboard.add(
+#             types.InlineKeyboardButton(
+#                 "🔍 Рассчитать стоимость автомобиля", callback_data="calculate_another"
+#             )
+#         )
 
-        # Отправляем сообщение с курсами и клавиатурой
-        bot.send_message(message.chat.id, rates_text, reply_markup=keyboard)
-    except Exception as e:
-        bot.send_message(
-            message.chat.id, "Не удалось получить курсы валют. Попробуйте позже."
-        )
-        print(f"Ошибка при получении курсов валют: {e}")
+#         # Отправляем сообщение с курсами и клавиатурой
+#         bot.send_message(message.chat.id, rates_text, reply_markup=keyboard)
+#     except Exception as e:
+#         bot.send_message(
+#             message.chat.id, "Не удалось получить курсы валют. Попробуйте позже."
+#         )
+#         print(f"Ошибка при получении курсов валют: {e}")
 
 
 @bot.message_handler(commands=["cbr"])
@@ -169,34 +169,35 @@ def main_menu(message):
     bot.send_message(message.chat.id, greeting, reply_markup=markup)
 
 
-# Выбор страны для расчёта
+# Расчёт автомобиля (только Россия)
 @bot.message_handler(func=lambda message: message.text in ["Расчёт", "Изменить страну"])
 def handle_calculation(message):
-    show_country_selection(message.chat.id)
+    global current_country
+    current_country = "Russia"
+    user_data[message.chat.id] = {"country": "Russia"}
+    show_calculation_options(message.chat.id)
 
 
 # Расчёт по ссылке с encar
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def process_encar_link(message):
-    # Проверяем, выбрана ли страна
+    global current_country
+    
+    # Устанавливаем Россию по умолчанию если страна не выбрана
     if message.chat.id not in user_data or "country" not in user_data[message.chat.id]:
-        bot.send_message(
-            message.chat.id,
-            "Пожалуйста, выберите страну из меню перед отправкой ссылки на автомобиль.",
-            reply_markup=show_country_selection(message.chat.id),
-        )
-        return
+        user_data[message.chat.id] = {"country": "Russia"}
+        current_country = "Russia"
 
     # Проверяем, что ссылка содержит encar.com или fem.encar.com
-    if "encar.com" not in message.text or "fem.encar.com" not in message.text:
+    if "encar.com" not in message.text:
         bot.send_message(
             message.chat.id,
             "🚫 Введите корректную ссылку с encar.com",
         )
         return
 
-    # Получаем выбранную страну
-    country = user_data[message.chat.id]["country"]
+    # Получаем страну (всегда Россия)
+    country = "Russia"
 
     # Отправляем сообщение о начале обработки
     processing_message = bot.send_message(message.chat.id, "⏳ Обработка данных...")
@@ -328,31 +329,16 @@ def process_manual_input(message):
     elif step == "price":
         if message.text.isdigit() and int(message.text) > 0:
             user_data[user_id]["price"] = int(message.text)
-
-            # Если страна — Кыргызстан, запрашиваем тип кузова
-            if current_country == "Kyrgyzstan":
-                user_data[user_id]["step"] = "car_type"
-
-                # Создаем клавиатуру с кнопками для выбора типа кузова
-                keyboard = types.ReplyKeyboardMarkup(
-                    resize_keyboard=True, one_time_keyboard=True
-                )
-                keyboard.add("Седан", "Кроссовер")
-
-                bot.send_message(
-                    user_id,
-                    "Пожалуйста, выберите тип кузова автомобиля:",
-                    reply_markup=keyboard,
-                )
-            else:
-                user_data[user_id]["step"] = None
-                year = user_data[user_id]["year"]
-                month = user_data[user_id]["month"]
-                engine_volume = user_data[user_id]["engine_volume"]
-                price = user_data[user_id]["price"]
-                calculate_manual_cost(
-                    message, year, month, engine_volume, price, current_country
-                )
+            user_data[user_id]["step"] = None
+            
+            # Всегда используем Россию
+            year = user_data[user_id]["year"]
+            month = user_data[user_id]["month"]
+            engine_volume = user_data[user_id]["engine_volume"]
+            price = user_data[user_id]["price"]
+            calculate_manual_cost(
+                message, year, month, engine_volume, price, "Russia"
+            )
         else:
             bot.send_message(
                 user_id,
@@ -460,39 +446,39 @@ def handle_russia(message):
 ###############
 
 
-##############
-# КАЗАХСТАН НАЧАЛО
-##############
-@bot.message_handler(func=lambda message: message.text == "🇰🇿 Казахстан")
-def handle_kazakhstan(message):
-    global current_country
-    current_country = "Kazakhstan"
-    user_data[message.chat.id] = {"country": "Kazakhstan"}
-    print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
-    show_calculation_options(message.chat.id)
+# ##############
+# # КАЗАХСТАН НАЧАЛО
+# ##############
+# @bot.message_handler(func=lambda message: message.text == "🇰🇿 Казахстан")
+# def handle_kazakhstan(message):
+#     global current_country
+#     current_country = "Kazakhstan"
+#     user_data[message.chat.id] = {"country": "Kazakhstan"}
+#     print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
+#     show_calculation_options(message.chat.id)
 
 
-##############
-# КАЗАХСТАН КОНЕЦ
-##############
+# ##############
+# # КАЗАХСТАН КОНЕЦ
+# ##############
 
 
-##############
-# КЫРГЫЗСТАН НАЧАЛО
-##############
-@bot.message_handler(func=lambda message: message.text == "🇰🇬 Кыргызстан")
-def handle_kyrgyzstan(message):
-    global current_country
+# ##############
+# # КЫРГЫЗСТАН НАЧАЛО
+# ##############
+# @bot.message_handler(func=lambda message: message.text == "🇰🇬 Кыргызстан")
+# def handle_kyrgyzstan(message):
+#     global current_country
 
-    current_country = "Kyrgyzstan"
-    user_data[message.chat.id] = {"country": "Kyrgyzstan"}
-    print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
-    show_calculation_options(message.chat.id)
+#     current_country = "Kyrgyzstan"
+#     user_data[message.chat.id] = {"country": "Kyrgyzstan"}
+#     print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
+#     show_calculation_options(message.chat.id)
 
 
-##############
-# КЫРГЫЗСТАН КОНЕЦ
-##############
+# ##############
+# # КЫРГЫЗСТАН КОНЕЦ
+# ##############
 
 
 # Обработчики для других кнопок
@@ -537,8 +523,16 @@ def run_in_thread(target):
 if __name__ == "__main__":
     # Запуск длительных задач в отдельных потоках
     run_in_thread(set_bot_commands)
-    run_in_thread(get_nbkr_currency_rates)
-    run_in_thread(get_nbk_currency_rates)
+    # run_in_thread(get_nbkr_currency_rates)  # Закомментировано - больше не используется
+    # run_in_thread(get_nbk_currency_rates)   # Закомментировано - больше не используется
     run_in_thread(get_currency_rates)
+    
+    # Удаляем webhook перед началом polling
+    try:
+        bot.delete_webhook()
+        print("Webhook удален успешно")
+    except Exception as e:
+        print(f"Ошибка при удалении webhook: {e}")
+    
     # Основной поток выполняет бот
     bot.polling(none_stop=True)
