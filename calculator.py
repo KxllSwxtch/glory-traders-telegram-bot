@@ -669,6 +669,14 @@ def calculate_cost(country, message):
             nds_rate_info = response.get("nds_k", "") if entity_type == "legal" else ""
             util_formula = response.get("util_k", "") if entity_type == "legal" else ""
             
+            print(f"[DEBUG] After API call - entity_type: {entity_type}, vat_amount: {vat_amount}")
+            print(f"[DEBUG] Response keys: {list(response.keys())}")
+            print(f"[DEBUG] Has 'nds' field: {'nds' in response}")
+            if entity_type == "legal":
+                print(f"[DEBUG] tax_rate_info: {tax_rate_info}")
+                print(f"[DEBUG] nds_rate_info: {nds_rate_info}")
+                print(f"[DEBUG] util_formula: {util_formula}")
+            
             # Общие таможенные расходы
             total_customs_fees = customs_duty + recycling_fee + customs_fee + vat_amount
             
@@ -703,6 +711,7 @@ def calculate_cost(country, message):
 
             # Формирование сообщения результата в зависимости от типа плательщика
             entity_label = "🙍 Физ. лицо" if entity_type == "physical" else "🏢 Юр. лицо"
+            print(f"[DEBUG] Formatting message - entity_type: {entity_type}, entity_label: {entity_label}")
             
             result_message = (
                 f"📋 <b>Информация об автомобиле ({entity_label}):</b>\n"
@@ -719,7 +728,7 @@ def calculate_cost(country, message):
             )
             
             # Для юридических лиц показываем детализацию таможенных платежей
-            if entity_type == "legal" and vat_amount > 0:
+            if entity_type == "legal":
                 result_message += f"🔹 <b>Таможенные платежи:</b>\n"
                 
                 # Таможенная пошлина с дополнительной информацией
@@ -738,12 +747,16 @@ def calculate_cost(country, message):
                     util_clean = util_formula.replace("&#8381;", "₽").replace("&times;", "×")
                     result_message += f"     <i>({util_clean})</i>\n"
                 
-                # НДС с процентом
-                result_message += f"   • НДС: {format_number(vat_amount)} ₽"
+                # НДС с процентом (показываем даже если 0)
+                if vat_amount > 0:
+                    result_message += f"   • НДС: {format_number(vat_amount)} ₽"
+                else:
+                    result_message += f"   • НДС: 0 ₽"
+                
                 if nds_rate_info:
                     result_message += f" ({nds_rate_info})\n"
                 else:
-                    result_message += "\n"
+                    result_message += " (20%)\n"  # Default rate if not provided
                 
                 result_message += f"   <b>Всего таможенных платежей:</b> {format_number(total_customs_fees)} ₽\n"
             else:
@@ -1323,7 +1336,7 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type, 
         )
         
         # Для юридических лиц показываем детализацию таможенных платежей
-        if entity_type == "legal" and vat_amount > 0:
+        if entity_type == "legal":
             result_message += f"🔹 <b>Таможенные платежи:</b>\n"
             
             # Таможенная пошлина с дополнительной информацией
@@ -1342,12 +1355,16 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type, 
                 util_clean = util_formula.replace("&#8381;", "₽").replace("&times;", "×")
                 result_message += f"     <i>({util_clean})</i>\n"
             
-            # НДС с процентом
-            result_message += f"   • НДС: {format_number(vat_amount)} ₽"
+            # НДС с процентом (показываем даже если 0)
+            if vat_amount > 0:
+                result_message += f"   • НДС: {format_number(vat_amount)} ₽"
+            else:
+                result_message += f"   • НДС: 0 ₽"
+            
             if nds_rate_info:
                 result_message += f" ({nds_rate_info})\n"
             else:
-                result_message += "\n"
+                result_message += " (20%)\n"  # Default rate if not provided
             
             result_message += f"   <b>Всего таможенных платежей:</b> {format_number(total_customs_fees)} ₽\n"
         else:
