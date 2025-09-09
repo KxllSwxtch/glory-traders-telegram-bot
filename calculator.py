@@ -549,18 +549,10 @@ def get_car_info(url):
     return [formatted_car_date, car_price, car_engine_displacement, formatted_car_type]
 
 
-def calculate_cost(country, message):
+def calculate_cost(country, message, entity_type="physical"):
     global car_data, car_id_external, util_fee, current_country, krw_rub_rate, eur_rub_rate, usd_rate_kz, usd_rate_krg, krw_rate_krg, usdt_krw_rate, usdt_rub_rate
     
-    # Импортируем user_data для получения типа плательщика
-    from main import user_data
-    
-    # Debug: проверяем содержимое user_data
-    print(f"[DEBUG] Full user_data for user {message.chat.id}: {user_data.get(message.chat.id, 'NOT_FOUND')}")
-    
-    # Получаем тип плательщика (по умолчанию физическое лицо)
-    entity_type = user_data.get(message.chat.id, {}).get("entity_type", "physical")
-    print(f"[DEBUG] Entity type for user {message.chat.id}: {entity_type}")
+    print(f"[DEBUG] calculate_cost called with entity_type: {entity_type} for user {message.chat.id}")
 
     # Получаем курсы криптовалют
     usdt_krw_rate = get_usdt_krw_rate()
@@ -1265,21 +1257,10 @@ def handle_callback_query(call):
 
 
 # Расчёты для ручного ввода
-def calculate_cost_manual(country, year, month, engine_volume, price, car_type, message=None):
+def calculate_cost_manual(country, year, month, engine_volume, price, car_type, message=None, entity_type="physical"):
     global eur_rub_rate
     
-    # Импортируем user_data для получения типа плательщика
-    from main import user_data
-    
-    # Debug: проверяем содержимое user_data
-    if message:
-        print(f"[DEBUG] calculate_cost_manual - Full user_data for user {message.chat.id}: {user_data.get(message.chat.id, 'NOT_FOUND')}")
-    
-    # Получаем тип плательщика (по умолчанию физическое лицо)
-    entity_type = "physical"
-    if message and message.chat.id in user_data:
-        entity_type = user_data[message.chat.id].get("entity_type", "physical")
-        print(f"[DEBUG] calculate_cost_manual - Entity type for user {message.chat.id}: {entity_type}")
+    print(f"[DEBUG] calculate_cost_manual called with entity_type: {entity_type}")
 
     if country == "Russia":
         print_message("Выполняется ручной расчёт стоимости для России")

@@ -213,7 +213,9 @@ def process_encar_link(message):
 
     # Пытаемся рассчитать стоимость
     try:
-        calculate_cost(country, message)
+        entity_type = user_data[message.chat.id].get("entity_type", "physical")
+        print(f"[DEBUG] process_encar_link passing entity_type: {entity_type} to calculate_cost")
+        calculate_cost(country, message, entity_type)
     except Exception as e:
         bot.send_message(
             message.chat.id,
@@ -412,8 +414,10 @@ def calculate_manual_cost(
 
     try:
         # Вызываем функцию расчёта стоимости из calculator.py
+        entity_type = user_data[message.chat.id].get("entity_type", "physical")
+        print(f"[DEBUG] calculate_manual_cost passing entity_type: {entity_type}")
         result_message = calculate_cost_manual(
-            country, year, month, engine_volume, price, car_type, message
+            country, year, month, engine_volume, price, car_type, message, entity_type
         )
 
         # Создаём клавиатуру с кнопками
