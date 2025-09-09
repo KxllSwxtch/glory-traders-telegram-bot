@@ -32,6 +32,7 @@ def get_customs_fees_russia(
 
     # Определяем owner в зависимости от типа плательщика
     owner_value = 1 if entity_type == "physical" else 2
+    print(f"[DEBUG] Calling calcus.ru API with owner={owner_value} (entity_type={entity_type})")
 
     payload = {
         "owner": owner_value,  # 1 - Физлицо, 2 - Юрлицо

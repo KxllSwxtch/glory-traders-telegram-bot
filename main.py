@@ -174,7 +174,10 @@ def main_menu(message):
 def handle_calculation(message):
     global current_country
     current_country = "Russia"
-    user_data[message.chat.id] = {"country": "Russia"}
+    # Сохраняем существующие данные пользователя, только обновляем страну
+    if message.chat.id not in user_data:
+        user_data[message.chat.id] = {}
+    user_data[message.chat.id]["country"] = "Russia"
     show_entity_type_selection(message.chat.id)
 
 
@@ -183,9 +186,11 @@ def handle_calculation(message):
 def process_encar_link(message):
     global current_country
     
-    # Устанавливаем Россию по умолчанию если страна не выбрана
-    if message.chat.id not in user_data or "country" not in user_data[message.chat.id]:
-        user_data[message.chat.id] = {"country": "Russia"}
+    # Устанавливаем Россию по умолчанию если страна не выбрана, сохраняя другие данные
+    if message.chat.id not in user_data:
+        user_data[message.chat.id] = {}
+    if "country" not in user_data[message.chat.id]:
+        user_data[message.chat.id]["country"] = "Russia"
         current_country = "Russia"
 
     # Проверяем, что ссылка содержит encar.com или fem.encar.com

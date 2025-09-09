@@ -557,6 +557,7 @@ def calculate_cost(country, message):
     
     # Получаем тип плательщика (по умолчанию физическое лицо)
     entity_type = user_data.get(message.chat.id, {}).get("entity_type", "physical")
+    print(f"[DEBUG] Entity type for user {message.chat.id}: {entity_type}")
 
     # Получаем курсы криптовалют
     usdt_krw_rate = get_usdt_krw_rate()
