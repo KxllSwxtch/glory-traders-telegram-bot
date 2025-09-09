@@ -192,6 +192,10 @@ def process_encar_link(message):
     if "country" not in user_data[message.chat.id]:
         user_data[message.chat.id]["country"] = "Russia"
         current_country = "Russia"
+    
+    # Debug: проверяем entity_type перед вызовом calculate_cost
+    entity_type = user_data[message.chat.id].get("entity_type", "not_set")
+    print(f"[DEBUG] process_encar_link - entity_type for user {message.chat.id}: {entity_type}")
 
     # Проверяем, что ссылка содержит encar.com или fem.encar.com
     if "encar.com" not in message.text:
@@ -223,6 +227,11 @@ def process_encar_link(message):
 
 @bot.message_handler(func=lambda message: message.text == "По ссылке с encar")
 def handle_link_input(message):
+    # Сохраняем entity_type в user_data для дальнейшего использования
+    if message.chat.id not in user_data:
+        user_data[message.chat.id] = {}
+    # entity_type уже должен быть установлен, просто убеждаемся что user_data существует
+    
     bot.send_message(
         message.chat.id,
         "Отправьте ссылку на автомобиль с сайта encar.com или мобильного приложения Encar.",
