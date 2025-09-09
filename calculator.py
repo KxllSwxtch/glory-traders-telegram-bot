@@ -551,6 +551,12 @@ def get_car_info(url):
 
 def calculate_cost(country, message):
     global car_data, car_id_external, util_fee, current_country, krw_rub_rate, eur_rub_rate, usd_rate_kz, usd_rate_krg, krw_rate_krg, usdt_krw_rate, usdt_rub_rate
+    
+    # Импортируем user_data для получения типа плательщика
+    from main import user_data
+    
+    # Получаем тип плательщика (по умолчанию физическое лицо)
+    entity_type = user_data.get(message.chat.id, {}).get("entity_type", "physical")
 
     # Получаем курсы криптовалют
     usdt_krw_rate = get_usdt_krw_rate()
@@ -645,15 +651,20 @@ def calculate_cost(country, message):
 
             # Получаем таможенные сборы через API
             response = get_customs_fees_russia(
-                car_engine_displacement, price_krw, year, month, engine_type=1
+                car_engine_displacement, price_krw, year, month, engine_type=1, entity_type=entity_type
             )
 
             customs_fee = clean_number(response["sbor"])
             customs_duty = clean_number(response["tax"])
             recycling_fee = clean_number(response["util"])
             
+            # Для юридических лиц добавляем НДС, если есть в ответе
+            vat_amount = 0
+            if entity_type == "legal" and "nds" in response:
+                vat_amount = clean_number(response["nds"])
+            
             # Общие таможенные расходы
-            total_customs_fees = customs_duty + recycling_fee + customs_fee
+            total_customs_fees = customs_duty + recycling_fee + customs_fee + vat_amount
             
             # Услуги брокера
             broker_services = 80000
@@ -673,15 +684,19 @@ def calculate_cost(country, message):
             car_data["customs_fee"] = customs_fee
             car_data["customs_duty"] = customs_duty
             car_data["recycling_fee"] = recycling_fee
+            car_data["vat_amount"] = vat_amount
             car_data["total_customs_fees"] = total_customs_fees
             car_data["broker_services"] = broker_services
             car_data["total_price"] = total_cost
+            car_data["entity_type"] = entity_type
 
             preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
 
-            # Формирование сообщения результата
+            # Формирование сообщения результата в зависимости от типа плательщика
+            entity_label = "🙍 Физ. лицо" if entity_type == "physical" else "🏢 Юр. лицо"
+            
             result_message = (
-                f"📋 <b>Информация об автомобиле:</b>\n"
+                f"📋 <b>Информация об автомобиле ({entity_label}):</b>\n"
                 f"Возраст: {age_formatted}\n"
                 f"Объём двигателя: {engine_volume_formatted}\n\n"
                 
@@ -692,7 +707,22 @@ def calculate_cost(country, message):
                 f"🔹 <b>Стоимость автомобиля в Корее:</b>\n₩{format_number(price_krw)}\n"
                 f"🔹 <b>Расходы до Владивостока:</b>\n₩{format_number(korea_costs_krw)}\n"
                 f"🔹 <b>Общие расходы в Корее в рублях:</b>\n{format_number(total_korea_rub)} ₽\n"
-                f"🔹 <b>Таможенные платежи:</b>\n{format_number(total_customs_fees)} ₽\n"
+            )
+            
+            # Для юридических лиц показываем детализацию таможенных платежей
+            if entity_type == "legal" and vat_amount > 0:
+                result_message += (
+                    f"🔹 <b>Таможенные платежи:</b>\n"
+                    f"   • Таможенная пошлина: {format_number(customs_duty)} ₽\n"
+                    f"   • Таможенный сбор: {format_number(customs_fee)} ₽\n"
+                    f"   • Утилизационный сбор: {format_number(recycling_fee)} ₽\n"
+                    f"   • НДС (20%): {format_number(vat_amount)} ₽\n"
+                    f"   <b>Всего:</b> {format_number(total_customs_fees)} ₽\n"
+                )
+            else:
+                result_message += f"🔹 <b>Таможенные платежи:</b>\n{format_number(total_customs_fees)} ₽\n"
+            
+            result_message += (
                 f"🔹 <b>Услуги брокера (<i>СВХ, Выгрузка, Лаборатория, СБКТС и ЭПТС</i>):</b>\n{format_number(broker_services)} ₽\n"
                 
                 f"🔷 <b>Итого общая стоимость под ключ во Владивостоке:</b>\n"
@@ -1192,8 +1222,16 @@ def handle_callback_query(call):
 
 
 # Расчёты для ручного ввода
-def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
+def calculate_cost_manual(country, year, month, engine_volume, price, car_type, message=None):
     global eur_rub_rate
+    
+    # Импортируем user_data для получения типа плательщика
+    from main import user_data
+    
+    # Получаем тип плательщика (по умолчанию физическое лицо)
+    entity_type = "physical"
+    if message and message.chat.id in user_data:
+        entity_type = user_data[message.chat.id].get("entity_type", "physical")
 
     if country == "Russia":
         print_message("Выполняется ручной расчёт стоимости для России")
@@ -1215,14 +1253,19 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
 
         # Получаем таможенные сборы через API
         response = get_customs_fees_russia(
-            engine_volume, price_krw, year, month, engine_type=1
+            engine_volume, price_krw, year, month, engine_type=1, entity_type=entity_type
         )
         customs_duty = clean_number(response["tax"])
         customs_fee = clean_number(response["sbor"])
         recycling_fee = clean_number(response["util"])
         
+        # Для юридических лиц добавляем НДС, если есть в ответе
+        vat_amount = 0
+        if entity_type == "legal" and "nds" in response:
+            vat_amount = clean_number(response["nds"])
+        
         # Общие таможенные расходы
-        total_customs_fees = customs_duty + recycling_fee + customs_fee
+        total_customs_fees = customs_duty + recycling_fee + customs_fee + vat_amount
         
         # Услуги брокера
         broker_services = 80000
@@ -1230,8 +1273,11 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
         # Расчет итоговой стоимости автомобиля
         total_cost = total_korea_rub + total_customs_fees + broker_services
 
+        # Формирование сообщения результата в зависимости от типа плательщика
+        entity_label = "🙍 Физ. лицо" if entity_type == "physical" else "🏢 Юр. лицо"
+        
         result_message = (
-            f"📋 <b>Расчёт для автомобиля:</b>\n\n"
+            f"📋 <b>Расчёт для автомобиля ({entity_label}):</b>\n\n"
             f"Дата: <i>{str(year)}/{str(month)}</i>\n"
             f"Объём: <b>{format_number(engine_volume)} cc</b>\n\n"
             
@@ -1242,7 +1288,22 @@ def calculate_cost_manual(country, year, month, engine_volume, price, car_type):
             f"🔹 <b>Стоимость автомобиля в Корее:</b>\n₩{format_number(price_krw)}\n"
             f"🔹 <b>Расходы до Владивостока:</b>\n₩{format_number(korea_costs_krw)}\n"
             f"🔹 <b>Общие расходы в Корее в рублях:</b>\n{format_number(total_korea_rub)} ₽\n"
-            f"🔹 <b>Таможенные платежи:</b>\n{format_number(total_customs_fees)} ₽\n"
+        )
+        
+        # Для юридических лиц показываем детализацию таможенных платежей
+        if entity_type == "legal" and vat_amount > 0:
+            result_message += (
+                f"🔹 <b>Таможенные платежи:</b>\n"
+                f"   • Таможенная пошлина: {format_number(customs_duty)} ₽\n"
+                f"   • Таможенный сбор: {format_number(customs_fee)} ₽\n"
+                f"   • Утилизационный сбор: {format_number(recycling_fee)} ₽\n"
+                f"   • НДС (20%): {format_number(vat_amount)} ₽\n"
+                f"   <b>Всего:</b> {format_number(total_customs_fees)} ₽\n"
+            )
+        else:
+            result_message += f"🔹 <b>Таможенные платежи:</b>\n{format_number(total_customs_fees)} ₽\n"
+            
+        result_message += (
             f"🔹 <b>Услуги брокера <i>СВХ, Выгрузка, Лаборатория, СБКТС и ЭПТС</i>:</b>\n{format_number(broker_services)} ₽\n"
             
             f"🔷 <b>Итого под ключ до Владивостока:</b> <b>{format_number(total_cost)} ₽</b>\n\n"

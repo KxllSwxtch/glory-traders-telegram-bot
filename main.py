@@ -175,7 +175,7 @@ def handle_calculation(message):
     global current_country
     current_country = "Russia"
     user_data[message.chat.id] = {"country": "Russia"}
-    show_calculation_options(message.chat.id)
+    show_entity_type_selection(message.chat.id)
 
 
 # Расчёт по ссылке с encar
@@ -224,10 +224,27 @@ def handle_link_input(message):
     )
 
 
+# Обработчик выбора типа плательщика - Физ. лицо
+@bot.message_handler(func=lambda message: message.text == "🙍 Физ. лицо")
+def handle_physical_entity(message):
+    user_data[message.chat.id] = user_data.get(message.chat.id, {})
+    user_data[message.chat.id]["entity_type"] = "physical"
+    print(f"Выбран тип плательщика: Физ. лицо для пользователя {message.chat.id}")
+    show_calculation_options(message.chat.id)
+
+# Обработчик выбора типа плательщика - Юр. лицо
+@bot.message_handler(func=lambda message: message.text == "🏢 Юр. лицо")
+def handle_legal_entity(message):
+    user_data[message.chat.id] = user_data.get(message.chat.id, {})
+    user_data[message.chat.id]["entity_type"] = "legal"
+    print(f"Выбран тип плательщика: Юр. лицо для пользователя {message.chat.id}")
+    show_calculation_options(message.chat.id)
+
 # Ручной расчёт
 @bot.message_handler(func=lambda message: message.text == "Ручной ввод")
 def handle_manual_input(message):
-    user_data[message.chat.id] = {"step": "year"}
+    user_data[message.chat.id] = user_data.get(message.chat.id, {})
+    user_data[message.chat.id]["step"] = "year"
     bot.send_message(
         message.chat.id,
         "📅 Укажите год выпуска автомобиля (например: 2022):",
@@ -382,7 +399,7 @@ def calculate_manual_cost(
     try:
         # Вызываем функцию расчёта стоимости из calculator.py
         result_message = calculate_cost_manual(
-            country, year, month, engine_volume, price, car_type
+            country, year, month, engine_volume, price, car_type, message
         )
 
         # Создаём клавиатуру с кнопками
@@ -418,6 +435,15 @@ def calculate_manual_cost(
         print(f"Ошибка при расчёте: {e}")
 
 
+def show_entity_type_selection(chat_id):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn_physical = types.KeyboardButton("🙍 Физ. лицо")
+    btn_legal = types.KeyboardButton("🏢 Юр. лицо")
+    btn_main_menu = types.KeyboardButton("Вернуться в главное меню")
+    markup.add(btn_physical, btn_legal, btn_main_menu)
+
+    bot.send_message(chat_id, "Выберите тип плательщика:", reply_markup=markup)
+
 def show_calculation_options(chat_id):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn_link = types.KeyboardButton("По ссылке с encar")
@@ -438,7 +464,7 @@ def handle_russia(message):
     current_country = "Russia"
     user_data[message.chat.id] = {"country": "Russia"}
     print(f"Сохранена страна: {user_data[message.chat.id]['country']}")  # Логирование
-    show_calculation_options(message.chat.id)
+    show_entity_type_selection(message.chat.id)
 
 
 ###############

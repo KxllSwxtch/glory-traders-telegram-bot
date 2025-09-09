@@ -16,20 +16,25 @@ def clean_number(value):
 
 
 def get_customs_fees_russia(
-    engine_volume, car_price, car_year, car_month, engine_type=1
+    engine_volume, car_price, car_year, car_month, engine_type=1, entity_type="physical"
 ):
     """
     Запрашивает расчёт таможенных платежей с сайта calcus.ru.
     :param engine_volume: Объём двигателя (куб. см)
     :param car_price: Цена авто в вонах
     :param car_year: Год выпуска авто
+    :param car_month: Месяц выпуска авто
     :param engine_type: Тип двигателя (1 - бензин, 2 - дизель, 3 - гибрид, 4 - электромобиль)
+    :param entity_type: Тип плательщика ("physical" - физ.лицо, "legal" - юр.лицо)
     :return: JSON с результатами расчёта
     """
     url = "https://calcus.ru/calculate/Customs"
 
+    # Определяем owner в зависимости от типа плательщика
+    owner_value = 1 if entity_type == "physical" else 2
+
     payload = {
-        "owner": 1,  # Физлицо
+        "owner": owner_value,  # 1 - Физлицо, 2 - Юрлицо
         "age": calculate_age(car_year, car_month),  # Возрастная категория
         "engine": engine_type,  # Тип двигателя (по умолчанию 1 - бензин)
         "power": 1,  # Лошадиные силы (можно оставить 1)
