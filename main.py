@@ -6,11 +6,12 @@ from calculator import (
     calculate_cost,
     get_currency_rates,
     # show_country_selection,  # Закомментировано - больше не используется
-    # get_nbk_currency_rates,  # Закомментировано - больше не используется  
+    # get_nbk_currency_rates,  # Закомментировано - больше не используется
     # get_nbkr_currency_rates, # Закомментировано - больше не используется
     calculate_cost_manual,
 )
 from config import bot
+from spam_filter import spam_filter
 
 
 # Переменные
@@ -20,6 +21,26 @@ current_car_type = "sedan"
 
 # Set locale for number formatting
 locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+
+
+def spam_protection(func):
+    """Декоратор для защиты от спама"""
+    def wrapper(message):
+        # Проверяем, нужно ли игнорировать сообщение
+        if spam_filter.should_ignore_message(message):
+            reason = spam_filter.get_spam_reason(message)
+            print(f"[SPAM FILTER] Ignored message from user {message.from_user.id if message.from_user else 'unknown'}: {reason}")
+
+            # Логируем спам-сообщения для анализа
+            if message.text:
+                print(f"[SPAM CONTENT] {message.text[:100]}...")
+
+            return  # Игнорируем сообщение
+
+        # Если сообщение прошло проверку, выполняем оригинальную функцию
+        return func(message)
+
+    return wrapper
 
 
 # Обработчик callback
@@ -98,7 +119,58 @@ def set_bot_commands():
 #         print(f"Ошибка при получении курсов валют: {e}")
 
 
+# Админские команды для управления спам-фильтром
+@bot.message_handler(commands=["admin_spam_stats"])
+def admin_spam_stats(message):
+    """Статистика спам-фильтра (только для админов)"""
+    user_id = message.from_user.id
+    if not spam_filter.is_admin(user_id):
+        return
+
+    blacklist_count = len(spam_filter.blacklisted_users)
+    whitelist_count = len(spam_filter.whitelisted_users)
+
+    stats_text = f"""📊 Статистика спам-фильтра:
+🚫 Черный список: {blacklist_count} пользователей
+✅ Белый список: {whitelist_count} пользователей
+👮‍♂️ Админов: {len(spam_filter.admin_users)}"""
+
+    bot.send_message(message.chat.id, stats_text)
+
+
+@bot.message_handler(commands=["admin_whitelist"])
+def admin_whitelist_command(message):
+    """Добавить пользователя в белый список (только для админов)"""
+    user_id = message.from_user.id
+    if not spam_filter.is_admin(user_id):
+        return
+
+    # Ожидаем формат: /admin_whitelist 123456789
+    try:
+        target_user_id = int(message.text.split()[1])
+        spam_filter.add_to_whitelist(target_user_id)
+        bot.send_message(message.chat.id, f"✅ Пользователь {target_user_id} добавлен в белый список")
+    except (IndexError, ValueError):
+        bot.send_message(message.chat.id, "❌ Использование: /admin_whitelist <user_id>")
+
+
+@bot.message_handler(commands=["admin_blacklist"])
+def admin_blacklist_command(message):
+    """Добавить пользователя в черный список (только для админов)"""
+    user_id = message.from_user.id
+    if not spam_filter.is_admin(user_id):
+        return
+
+    try:
+        target_user_id = int(message.text.split()[1])
+        spam_filter.add_to_blacklist(target_user_id)
+        bot.send_message(message.chat.id, f"🚫 Пользователь {target_user_id} добавлен в черный список")
+    except (IndexError, ValueError):
+        bot.send_message(message.chat.id, "❌ Использование: /admin_blacklist <user_id>")
+
+
 @bot.message_handler(commands=["cbr"])
+@spam_protection
 def cbr_command(message):
     try:
         rates_text = get_currency_rates()
@@ -122,6 +194,7 @@ def cbr_command(message):
 
 # Самый старт
 @bot.message_handler(commands=["start"])
+@spam_protection
 def start(message):
     user_name = message.from_user.first_name
 
@@ -145,6 +218,7 @@ def start(message):
 
 # Главное меню
 @bot.message_handler(func=lambda message: message.text == "Вернуться в главное меню")
+@spam_protection
 def main_menu(message):
     user_id = message.chat.id
 
@@ -171,6 +245,7 @@ def main_menu(message):
 
 # Расчёт автомобиля (только Россия)
 @bot.message_handler(func=lambda message: message.text in ["Расчёт", "Изменить страну"])
+@spam_protection
 def handle_calculation(message):
     global current_country
     current_country = "Russia"
@@ -183,6 +258,7 @@ def handle_calculation(message):
 
 # Расчёт по ссылке с encar
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
+@spam_protection
 def process_encar_link(message):
     global current_country
     
@@ -228,6 +304,7 @@ def process_encar_link(message):
 
 
 @bot.message_handler(func=lambda message: message.text == "По ссылке с encar")
+@spam_protection
 def handle_link_input(message):
     # Сохраняем entity_type в user_data для дальнейшего использования
     if message.chat.id not in user_data:
@@ -242,6 +319,7 @@ def handle_link_input(message):
 
 # Обработчик выбора типа плательщика - Физ. лицо
 @bot.message_handler(func=lambda message: message.text == "🙍 Физ. лицо")
+@spam_protection
 def handle_physical_entity(message):
     user_data[message.chat.id] = user_data.get(message.chat.id, {})
     user_data[message.chat.id]["entity_type"] = "physical"
@@ -250,6 +328,7 @@ def handle_physical_entity(message):
 
 # Обработчик выбора типа плательщика - Юр. лицо
 @bot.message_handler(func=lambda message: message.text == "🏢 Юр. лицо")
+@spam_protection
 def handle_legal_entity(message):
     user_data[message.chat.id] = user_data.get(message.chat.id, {})
     user_data[message.chat.id]["entity_type"] = "legal"
@@ -258,6 +337,7 @@ def handle_legal_entity(message):
 
 # Ручной расчёт
 @bot.message_handler(func=lambda message: message.text == "Ручной ввод")
+@spam_protection
 def handle_manual_input(message):
     user_data[message.chat.id] = user_data.get(message.chat.id, {})
     user_data[message.chat.id]["step"] = "year"
@@ -271,6 +351,7 @@ def handle_manual_input(message):
     func=lambda message: message.chat.id in user_data
     and "step" in user_data[message.chat.id]
 )
+@spam_protection
 def process_manual_input(message):
     global current_country, current_car_type
 
@@ -476,6 +557,7 @@ def show_calculation_options(chat_id):
 # РОССИЯ НАЧАЛО
 ###############
 @bot.message_handler(func=lambda message: message.text == "🇷🇺 Россия")
+@spam_protection
 def handle_russia(message):
     global current_country
 
@@ -527,6 +609,7 @@ def handle_russia(message):
 
 # Обработчики для других кнопок
 @bot.message_handler(func=lambda message: message.text == "Instagram")
+@spam_protection
 def handle_instagram(message):
     bot.send_message(
         message.chat.id,
@@ -535,6 +618,7 @@ def handle_instagram(message):
 
 
 @bot.message_handler(func=lambda message: message.text == "WhatsApp")
+@spam_protection
 def handle_whatsapp(message):
     bot.send_message(
         message.chat.id, "Напишите нам в WhatsApp: https://wa.me/821023297807"
@@ -542,6 +626,7 @@ def handle_whatsapp(message):
 
 
 @bot.message_handler(func=lambda message: message.text == "Telegram-канал")
+@spam_protection
 def handle_telegram_channel(message):
     bot.send_message(
         message.chat.id,
@@ -550,11 +635,26 @@ def handle_telegram_channel(message):
 
 
 @bot.message_handler(func=lambda message: message.text == "Контакты")
+@spam_protection
 def handle_manager(message):
     bot.send_message(
         message.chat.id,
         "+79035957700 - Геннадий (Москва)\n@GLORY_TRADERS - Вячеслав (Корея)\n",
     )
+
+
+# Обработчик для всех прочих сообщений (fallback для спама)
+@bot.message_handler(func=lambda message: True)
+@spam_protection
+def handle_unknown_message(message):
+    """Обработчик для неизвестных команд и потенциального спама"""
+    # Если сообщение дошло до этого обработчика, значит оно не спам
+    # Отправляем пользователя в главное меню
+    bot.send_message(
+        message.chat.id,
+        "🤖 Я не понимаю эту команду. Пожалуйста, используйте меню ниже:",
+    )
+    main_menu(message)
 
 
 def run_in_thread(target):
